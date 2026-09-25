@@ -3,282 +3,97 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0867c9">
+<meta name="theme-color" content="#123f7b">
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" sizes="192x192" href="./icon-192.png">
-<title>Controle de Estoque 360</title>
+<title>Estoque 360</title>
 <style>
-:root{--blue:#0867c9;--blue2:#0b57a7;--green:#12b886;--orange:#ff9217;--purple:#5d46dc;--bg:#f3f7fb;--text:#15324b;--muted:#6d8295;--card:#fff;--line:#dce7f0;--danger:#e74c3c}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text)}
-button,input{font:inherit}button{cursor:pointer}.app{min-height:100vh}.top{height:78px;background:linear-gradient(135deg,#0b67c9,#0755a8);color:#fff;display:flex;align-items:center;gap:12px;padding:0 18px;position:sticky;top:0;z-index:20;box-shadow:0 3px 12px #174a7a2e}.top .brand-logo{width:150px;height:58px;object-fit:contain;display:block;flex:1;margin:auto}.iconbtn{border:0;background:transparent;color:#fff;font-size:25px;width:40px;height:40px;border-radius:50%}.content{max-width:620px;margin:auto;padding:18px 16px 30px}.welcome{background:#fff;border-radius:16px;padding:16px;display:flex;gap:12px;align-items:center;box-shadow:0 3px 14px #1b5b8820;margin-bottom:14px}.logo{width:48px;height:48px;border-radius:14px;background:#e9f4ff;display:grid;place-items:center;font-size:28px}.welcome strong{display:block;font-size:15px}.welcome small{color:var(--muted)}.menu{display:grid;gap:10px}.menu-card{border:0;color:#fff;border-radius:15px;padding:17px;display:flex;align-items:center;gap:13px;text-align:left;box-shadow:0 5px 13px #234b7020}.menu-card .mi{font-size:28px;width:42px;text-align:center}.menu-card b{font-size:15px}.menu-card small{display:block;opacity:.9;margin-top:4px}.os{background:linear-gradient(135deg,#1688ef,#0872db)}.task{background:linear-gradient(135deg,#0bbd9c,#0aa98e)}.return{background:linear-gradient(135deg,#ff9b1a,#f57f00)}.consult{background:linear-gradient(135deg,#674be5,#5640ce)}page-title{font-size:20px;margin:4px 0 16px}.panel{background:#fff;border-radius:16px;padding:15px;box-shadow:0 3px 14px #1b5b8820;margin-bottom:12px}.field{margin-bottom:12px}.field label{font-size:13px;font-weight:700;display:block;margin-bottom:6px}.inputrow{display:flex;gap:8px}.input,.select{width:100%;height:46px;border:1px solid #c9d9e6;border-radius:10px;padding:0 12px;outline:none;background:#fff}.input:focus{border-color:#1688ef;box-shadow:0 0 0 3px #1688ef18}primary{width:100%;border:0;background:#0873dc;color:#fff;border-radius:11px;height:48px;font-weight:700}.greenbtn{background:#0ab488}.orangebtn{background:#f58b08}.purplebtn{background:#5b45d8}.secondary{width:100%;border:1px solid #bcd2e3;background:#fff;color:#1267ad;border-radius:11px;height:44px;font-weight:700}.status{padding:11px;border-radius:10px;background:#e9f8f1;color:#16805d;font-size:13px;margin:10px 0}.status.err{background:#fff0ee;color:#bd3c2f}.searchbox{position:relative}.suggestions{position:absolute;left:0;right:0;top:52px;background:#fff;border:1px solid #d5e3ee;border-radius:10px;box-shadow:0 8px 20px #15324b20;z-index:10;overflow:hidden}.suggestion{padding:11px;border-bottom:1px solid #eef3f7;display:flex;justify-content:space-between;gap:8px}.suggestion:last-child{border-bottom:0}.suggestion b{font-size:13px}.suggestion small{display:block;color:var(--muted);margin-top:3px}.stock{font-size:12px;color:#176fb3;white-space:nowrap}.items{display:grid;gap:8px}.item{border:1px solid var(--line);border-radius:12px;padding:10px;background:#fbfdff}.itemtop{display:flex;gap:8px}.itemtop .num{width:26px;height:26px;border-radius:50%;background:#075fb8;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:bold}.itemtop .desc{flex:1;font-size:13px;font-weight:700}.itemmeta{color:var(--muted);font-size:11px;margin-left:34px;margin-top:2px}.itembottom{display:flex;gap:8px;align-items:center;margin-top:8px;margin-left:34px}.qty{width:95px;height:40px;border:1px solid #c8d9e5;border-radius:9px;padding:0 9px}.remove{border:0;background:#fff0ee;color:#d84b3e;width:40px;height:40px;border-radius:9px}.limit{font-size:12px;color:var(--muted);margin-bottom:9px}.summary{background:#eef7ff;border-radius:11px;padding:11px;font-size:13px}.order-found{background:#e9f8f1;border:1px solid #b8e7d5;color:#147c5b;padding:11px;border-radius:11px;font-size:13px;margin-bottom:12px}.order-item{border:1px solid var(--line);border-radius:12px;padding:10px}.order-item .row{display:flex;justify-content:space-between;gap:10px}.order-item b{font-size:13px}.order-item small{color:var(--muted)}.returnqty{width:90px;height:40px;border:1px solid #bdd2e2;border-radius:9px;text-align:center}.bottomnote{text-align:center;color:var(--muted);font-size:11px;margin-top:16px}.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#16344e;color:#fff;padding:11px 15px;border-radius:10px;z-index:50;display:none;max-width:90%;font-size:13px}.modal{position:fixed;inset:0;background:#071a2a88;display:none;align-items:flex-end;justify-content:center;z-index:40}.modalbox{background:#fff;width:min(620px,100%);border-radius:20px 20px 0 0;padding:18px;max-height:80vh;overflow:auto}.modalbox h3{margin:0 0 12px}.modalactions{display:grid;gap:8px;margin-top:14px}@media(min-width:700px){.modal{align-items:center}.modalbox{border-radius:18px}.content{padding-top:25px}.menu{grid-template-columns:1fr 1fr}}
+:root{
+  --blue:#123f7b;--blue2:#0d3265;--brand:#087fe8;--cyan:#08b9f4;
+  --green:#14b886;--orange:#ff9217;--purple:#5d46dc;
+  --bg:#eef5fb;--text:#12314f;--muted:#6d8194;--card:#fff;--line:#dfe8ef;
+  --shadow:0 5px 16px rgba(25,67,105,.10)
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text)}
+button,input,select{font:inherit}button{cursor:pointer}
+.app{min-height:100vh}
+.top{background:var(--blue);color:#fff;min-height:142px;padding:10px 16px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 3px 14px rgba(12,49,92,.20);position:relative}
+.brand-logo{width:min(210px,55vw);height:70px;object-fit:contain;display:block}
+.brand-title{margin:0;font-size:27px;line-height:1.05;font-weight:800;letter-spacing:.2px;color:#fff;text-align:center}
+.brand-subtitle{margin:5px 0 0;font-size:13px;color:#fff;text-align:center;opacity:.96}
+.header-actions{position:absolute;left:10px;right:10px;top:10px;display:flex;justify-content:space-between;pointer-events:none}.iconbtn{pointer-events:auto;border:0;background:transparent;color:#fff;font-size:25px;width:40px;height:40px;border-radius:50%;display:grid;place-items:center}.iconbtn[hidden]{display:none}
+.content{width:min(680px,100%);margin:auto;padding:10px 10px 28px}
+.navbar{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:0 0 9px}
+.navbtn{border:1px solid #dbe6ee;background:#fff;color:#12314f;border-radius:10px;min-height:43px;padding:6px 4px;font-weight:700;box-shadow:0 2px 8px rgba(20,67,105,.07);font-size:9px;line-height:1.1}
+.navbtn.active{background:#1f68d5;color:#fff;border-color:#1f68d5}.navicon{font-size:16px;display:block;margin-bottom:2px}
+.welcome,.quick-grid{display:none}
+.dashboard{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:0 0 9px}
+.metric{background:#fff;border-radius:11px;padding:9px 7px;box-shadow:var(--shadow);min-height:65px;text-align:center;display:flex;flex-direction:column;justify-content:center}.metric .label{font-size:8px;color:var(--muted);display:block;white-space:nowrap}.metric .value{font-size:17px;font-weight:800;margin-top:3px}.metric .hint{font-size:7px;color:var(--muted);margin-top:1px}
+.section-card{background:#fff;border-radius:12px;padding:10px;box-shadow:var(--shadow);margin:0}.section-head{display:flex;align-items:center;justify-content:space-between;gap:7px}.section-head h3{margin:0;font-size:15px}.section-head p{margin:2px 0 0;color:var(--muted);font-size:8px}.refresh{border:1px solid #d5e2ec;background:#fff;border-radius:9px;padding:7px 9px;font-size:9px;font-weight:700;color:var(--text)}
+.activity-list{margin-top:6px;display:grid;gap:4px}.activity{border:1px solid #e2eaf0;border-radius:9px;padding:6px 7px;display:grid;grid-template-columns:28px 1fr auto;gap:6px;align-items:center;min-height:48px}.activity .act-icon{width:26px;height:26px;border-radius:50%;background:#f0f5f8;display:grid;place-items:center;font-size:15px}.activity .act-main{min-width:0}.activity b{font-size:9px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.activity small{display:block;color:var(--muted);margin-top:2px;font-size:7px;line-height:1.25}.activity .pill{font-size:7px;font-weight:800;border-radius:10px;padding:4px 6px;white-space:nowrap}.activity .pill.saida{background:#ffe8e6;color:#d64b40}.activity .pill.devolucao{background:#def7ea;color:#159768}.empty{color:var(--muted);font-size:9px;padding:14px;text-align:center}
+.bottomnote{text-align:center;color:var(--muted);font-size:8px;margin:9px auto 0}
+.page-title{font-size:22px;margin:3px 0 12px;font-weight:800}.panel{background:#fff;border-radius:13px;padding:13px;box-shadow:var(--shadow);margin-bottom:10px}.field{margin-bottom:11px}.field:last-child{margin-bottom:0}.field label{font-size:12px;font-weight:700;display:block;margin-bottom:6px}.inputrow{display:flex;gap:7px}.input,.select{width:100%;height:45px;border:1px solid #c9d9e6;border-radius:10px;padding:0 12px;outline:none;background:#fff;color:var(--text)}.input:focus,.select:focus{border-color:#1688ef;box-shadow:0 0 0 3px rgba(22,136,239,.10)}
+.primary,.secondary{width:100%;border-radius:10px;height:45px;font-weight:800}.primary{border:0;background:#146bd8;color:#fff}.greenbtn{background:#0ab488}.orangebtn{background:#f58b08}.purplebtn{background:#5b45d8}.secondary{border:1px solid #bcd2e3;background:#fff;color:#1267ad}
+.choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.choice{border:1px solid #d6e4ee;background:#fff;border-radius:10px;padding:11px;font-weight:700;text-align:left}.choice.active{border-color:#1b72df;background:#edf5ff;color:#1263b7}.choice small{display:block;color:var(--muted);font-weight:400;margin-top:2px}.limit{font-size:11px;color:var(--muted);margin-bottom:8px}.searchbox{position:relative}.suggestions{position:absolute;left:0;right:0;top:52px;background:#fff;border:1px solid #d5e3ee;border-radius:10px;box-shadow:0 10px 24px rgba(21,50,75,.16);z-index:30;overflow:hidden;max-height:330px;overflow-y:auto}.suggestion{width:100%;border:0;background:#fff;padding:11px;text-align:left;border-bottom:1px solid #eef3f7;display:flex;justify-content:space-between;gap:10px}.suggestion:last-child{border-bottom:0}.suggestion b{font-size:12px}.suggestion small{display:block;color:var(--muted);margin-top:2px}.stock{font-size:11px;color:#176fb3;white-space:nowrap;text-align:right}.items{display:grid;gap:8px}.item{border:1px solid var(--line);border-radius:11px;padding:10px;background:#fbfdff}.itemtop{display:flex;gap:7px;align-items:flex-start}.itemtop .num{width:25px;height:25px;border-radius:50%;background:#075fb8;color:#fff;display:grid;place-items:center;font-size:11px;font-weight:bold;flex:0 0 auto}.itemtop .desc{flex:1;font-size:12px;font-weight:700;line-height:1.25}.itembottom{display:grid;grid-template-columns:90px 1fr;gap:7px;align-items:center;margin-top:8px;margin-left:32px}.qty,.returnqty{height:40px;border:1px solid #c8d9e5;border-radius:9px;padding:0 8px}.remove{border:0;background:#fff0ee;color:#d84b3e;width:36px;height:36px;border-radius:8px;margin-left:auto}.itemmeta{color:var(--muted);font-size:10px;margin-left:32px;margin-top:3px}.summary{background:#eef7ff;border-radius:10px;padding:10px;font-size:12px}.order-found{background:#e9f8f1;border:1px solid #b8e7d5;color:#147c5b;padding:11px;border-radius:10px;font-size:12px;margin-bottom:10px}.order-item{border:1px solid var(--line);border-radius:10px;padding:10px}.order-item .row{display:flex;justify-content:space-between;gap:9px;align-items:center}.order-item b{font-size:12px}.order-item small{color:var(--muted);font-size:10px}.history-tabs{display:flex;gap:7px;margin-bottom:10px}.history-tab{border:1px solid #d6e3ed;background:#fff;border-radius:9px;padding:8px 10px;font-weight:700}.history-tab.active{background:#eaf3ff;border-color:#1c70dc;color:#125fae}.toast{position:fixed;left:50%;bottom:15px;transform:translateX(-50%);background:#16344e;color:#fff;padding:10px 13px;border-radius:9px;z-index:50;display:none;max-width:92%;font-size:12px;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.modal{position:fixed;inset:0;background:rgba(7,26,42,.55);display:none;align-items:flex-end;justify-content:center;z-index:40}.modalbox{background:#fff;width:min(620px,100%);border-radius:18px 18px 0 0;padding:17px;max-height:82vh;overflow:auto}.modalbox h3{margin:0 0 10px}.modalactions{display:grid;gap:7px;margin-top:12px}.status{padding:11px;border-radius:9px;background:#e9f8f1;color:#16805d;font-size:12px;margin:9px 0}.status.err{background:#fff0ee;color:#bd3c2f}
+@media(min-width:700px){.top{min-height:170px}.content{padding-top:13px}.navbtn{font-size:11px;min-height:50px}.navicon{font-size:18px}.metric{min-height:78px}.metric .label{font-size:10px}.metric .value{font-size:22px}.metric .hint{font-size:8px}.section-card{padding:13px}.section-head h3{font-size:18px}.section-head p{font-size:10px}.activity b{font-size:11px}.activity small{font-size:8px}.activity .pill{font-size:8px}.bottomnote{font-size:9px}}
+@media(max-width:420px){.top{min-height:105px;padding:6px 10px 10px}.brand-logo{width:155px;height:49px}.brand-title{font-size:20px}.brand-subtitle{font-size:9px;margin-top:3px}.content{padding:8px 7px 22px}.navbtn{min-height:39px;font-size:8px}.navicon{font-size:14px}.metric{min-height:58px;padding:7px 4px}.metric .label{font-size:7px}.metric .value{font-size:15px}.metric .hint{font-size:6px}.section-card{padding:8px}.section-head h3{font-size:13px}.section-head p{font-size:7px}.refresh{font-size:8px;padding:6px 7px}.activity{grid-template-columns:25px 1fr auto;padding:5px 6px;min-height:43px}.activity .act-icon{width:23px;height:23px;font-size:13px}.activity b{font-size:8px}.activity small{font-size:6.5px}.activity .pill{font-size:6.5px;padding:3px 5px}}
 </style>
 </head>
 <body>
 <div class="app">
-  <header class="top">
-    <button id="backBtn" class="iconbtn" style="visibility:hidden" aria-label="Voltar">‹</button>
-    <img id="topLogo" class="brand-logo" src="./LOGO-360-200x100.png" alt="360 Manutenção">
+<header class="top">
+  <div class="header-actions">
+    <button id="backBtn" class="iconbtn" hidden aria-label="Voltar">‹</button>
     <button id="homeBtn" class="iconbtn" aria-label="Início">⌂</button>
-  </header>
-  <main id="content" class="content"></main>
+  </div>
+  <img class="brand-logo" src="./LOGO-360-200x100.png" alt="Grupo 360 Manutenção">
+  <h1 class="brand-title">ESTOQUE 360</h1>
+  <div class="brand-subtitle">Controle de estoque, saídas e devoluções</div>
+</header>
+<main id="content" class="content"></main>
 </div>
 <div id="toast" class="toast"></div>
 <div id="modal" class="modal"><div class="modalbox" id="modalBox"></div></div>
 <iframe name="postFrame" id="postFrame" style="display:none"></iframe>
-
 <script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbyxONwGIp_U8GnygyDBLEL6-UzfzXmeL31UzQ_QrKGis6h0h62h9T1j1IhHi0xEIZm2Yg/exec';
-const state = {page:'home', items:[], order:null, returnItems:[]};
-const OBSERVACOES = ['Para tarefa externa','Para uso da oficina','Para enrolamento de motor','Para uso em OS','Para uso da automação','Para tarefa interna','Para vendas','Para uso na peritagem'];
-
-const $ = id => document.getElementById(id);
+const API_URL='https://script.google.com/macros/s/AKfycbyxONwGIp_U8GnygyDBLEL6-UzfzXmeL31UzQ_QrKGis6h0h62h9T1j1IhHi0xEIZm2Yg/exec';
+const OBSERVACOES=['Para tarefa externa','Para uso da oficina','Para enrolamento de motor','Para uso em OS','Para uso da automação','Para tarefa interna','Para vendas','Para uso na peritagem'];
+const state={page:'home',items:[],order:null,returnItems:[],destination:'os',activities:loadActivities()};
+const $=id=>document.getElementById(id);
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
-function toast(msg){$('toast').textContent=msg;$('toast').style.display='block';clearTimeout(window._toast);window._toast=setTimeout(()=>$('toast').style.display='none',3000)}
-function apiReady(){if(API_URL.startsWith('COLE_')){toast('Configure a URL da API no app.js/index.html.');return false}return true}
-
-function jsonp(params){
-  return new Promise((resolve,reject)=>{
-    if(!apiReady()) return reject(new Error('API não configurada.'));
-    const cb='cb_'+Date.now()+'_'+Math.random().toString(36).slice(2);
-    const script=document.createElement('script');
-    const qs=new URLSearchParams({...params,callback:cb});
-    const timer=setTimeout(()=>{cleanup();reject(new Error('Tempo esgotado ao consultar a planilha.'))},30000);
-    function cleanup(){clearTimeout(timer);delete window[cb];script.remove()}
-    window[cb]=data=>{cleanup();resolve(data)}
-    script.onerror=()=>{cleanup();reject(new Error('Não foi possível conectar à API.'))};
-    script.src=API_URL+'?'+qs.toString();
-    document.body.appendChild(script);
-  });
-}
-
-function post(payload){
-  return new Promise((resolve,reject)=>{
-    if(!apiReady()) return reject(new Error('API não configurada.'));
-    const form=document.createElement('form');
-    form.method='POST'; form.action=API_URL; form.target='postFrame'; form.style.display='none';
-    const input=document.createElement('input'); input.type='hidden'; input.name='payload'; input.value=JSON.stringify(payload);
-    form.appendChild(input);document.body.appendChild(form);form.submit();form.remove();
-
-    const started=Date.now();
-    const poll=async()=>{
-      try{
-        const r=await jsonp({action:'status',tx:payload.tx});
-        if(r.ok && (r.status==='CONCLUIDO'||r.status==='ERRO')) return r.status==='CONCLUIDO'?resolve(r.result||r):reject(new Error(r.message||'Falha na operação.'));
-      }catch(e){}
-      if(Date.now()-started>25000) return reject(new Error('A planilha não confirmou a operação no tempo esperado.'));
-      setTimeout(poll,1000);
-    };
-    setTimeout(poll,900);
-  });
-}
-
-function nav(page){
-  state.page=page;
-  if(page==='home') renderHome();
-  if(page==='os'||page==='task') renderBaixa(page);
-  if(page==='return') renderReturn();
-  if(page==='stock') renderStock();
-  $('backBtn').style.visibility=page==='home'?'hidden':'visible';
-  // O cabeçalho usa a logo 360 em todas as telas.
-}
+function toast(msg){$('toast').textContent=msg;$('toast').style.display='block';clearTimeout(window._toast);window._toast=setTimeout(()=>$('toast').style.display='none',3200)}
+function apiReady(){if(API_URL.startsWith('COLE_')){toast('Configure a URL da API no index.html.');return false}return true}
+function jsonp(params){return new Promise((resolve,reject)=>{if(!apiReady())return reject(new Error('API não configurada.'));const cb='cb_'+Date.now()+'_'+Math.random().toString(36).slice(2);const script=document.createElement('script');const qs=new URLSearchParams({...params,callback:cb});const timer=setTimeout(()=>{cleanup();reject(new Error('Tempo esgotado ao consultar a planilha.'))},30000);function cleanup(){clearTimeout(timer);delete window[cb];script.remove()}window[cb]=data=>{cleanup();resolve(data)};script.onerror=()=>{cleanup();reject(new Error('Não foi possível conectar à API.'))};script.src=API_URL+'?'+qs.toString();document.body.appendChild(script)})}
+function post(payload){return new Promise((resolve,reject)=>{if(!apiReady())return reject(new Error('API não configurada.'));const form=document.createElement('form');form.method='POST';form.action=API_URL;form.target='postFrame';form.style.display='none';const input=document.createElement('input');input.type='hidden';input.name='payload';input.value=JSON.stringify(payload);form.appendChild(input);document.body.appendChild(form);form.submit();form.remove();const started=Date.now();const poll=async()=>{try{const r=await jsonp({action:'status',tx:payload.tx});if(r.ok&&(r.status==='CONCLUIDO'||r.status==='ERRO'))return r.status==='CONCLUIDO'?resolve(r.result||r):reject(new Error(r.message||'Falha na operação.'))}catch(e){}if(Date.now()-started>25000)return reject(new Error('A planilha não confirmou a operação no tempo esperado.'));setTimeout(poll,1000)};setTimeout(poll,900)})}
+function nav(page){state.page=page;closeModal();if(page==='home')renderHome();if(page==='new')renderNovaSaida();if(page==='return')renderReturn();if(page==='stock')renderStock();if(page==='history')renderHistory();$('backBtn').hidden=page==='home'}
 $('backBtn').onclick=()=>nav('home');$('homeBtn').onclick=()=>nav('home');
-
-function renderHome(){
- $('content').innerHTML=`
-  <section class="welcome"><div class="logo">📦</div><div><strong>Bem-vindo ao Controle de Estoque</strong><small>Selecione uma opção abaixo:</small></div></section>
-  <section class="menu">
-    <button class="menu-card os" onclick="nav('os')"><span class="mi">🧾</span><span><b>BAIXA POR OS</b><small>Registrar materiais utilizados em uma Ordem de Serviço</small></span>›</button>
-    <button class="menu-card task" onclick="nav('task')"><span class="mi">🔧</span><span><b>BAIXA POR TAREFA</b><small>Registrar materiais utilizados em uma Ordem de Tarefa</small></span>›</button>
-    <button class="menu-card return" onclick="nav('return')"><span class="mi">↩️</span><span><b>DEVOLUÇÃO</b><small>Registrar materiais que não foram utilizados</small></span>›</button>
-    <button class="menu-card consult" onclick="nav('stock')"><span class="mi">🔎</span><span><b>CONSULTAR</b><small>Consultar estoque e disponibilidade</small></span>›</button>
-  </section>
-  <div class="bottomnote">Grupo 360 Manutenção • Web App de estoque</div>`;
-}
-
-function renderBaixa(kind){
-  state.items=[];
-  const label=kind==='os'?'OS':'Tarefa', max=kind==='os'?15:20;
-  $('content').innerHTML=`
-   <h2 class="page-title">Baixa por ${label}</h2>
-   <section class="panel">
-    <div class="field"><label>Número da ${label}</label><div class="inputrow"><input id="orderNumber" class="input" inputmode="numeric" placeholder="${kind==='os'?'Ex.: 3952':'Ex.: 7821'}"></div></div>
-    <div class="field"><label>Quem vai receber o material</label><input id="receiver" class="input" placeholder="Nome do colaborador"></div>
-   </section>
-   <section class="panel">
-    <div class="limit">Materiais (máx. ${max} itens)</div>
-    <div class="searchbox"><input id="materialSearch" class="input" placeholder="Buscar por código ou descrição" oninput="searchMaterial(this.value)"><div id="suggestions" class="suggestions" style="display:none"></div></div>
-    <div id="items" class="items" style="margin-top:10px"></div>
-   </section>
-   <section class="panel">
-    <div class="summary" id="summary">Adicione os materiais utilizados nesta ${label.toLowerCase()}.</div>
-    <button class="primary" style="margin-top:10px" onclick="confirmBaixa('${kind}')">✓ CONFIRMAR BAIXA</button>
-   </section>`;
-}
-
-let searchTimer;
-let materialRequestId = 0;
-async function searchMaterial(q){
-  clearTimeout(searchTimer);
-  const box=$('suggestions');
-  const term=q.trim();
-  if(!term){materialRequestId++;box.style.display='none';return}
-  if(term.length<2){box.style.display='none';return}
-  const requestId=++materialRequestId;
-  searchTimer=setTimeout(async()=>{
-    try{
-      const r=await jsonp({action:'products',q:term});
-      if(requestId!==materialRequestId) return;
-      if(!r.ok) throw new Error(r.error);
-      const products=Array.isArray(r.products)?r.products:[];
-      box.innerHTML=products.map(p=>`<button class="suggestion" onclick='addItem(${JSON.stringify(p)})'><span><b>${esc(p.code)}</b><small>${esc(p.description)}</small></span><span class="stock">Est.: ${esc(p.stock)}<br>${esc(p.unit)}</span></button>`).join('')||'<div class="suggestion">Nenhum material encontrado.</div>';
-      box.style.display='block';
-    }catch(e){if(requestId!==materialRequestId)return;toast(e.message)}
-  },250);
-}
-
-function addItem(p){
-  const max=state.page==='os'?15:20;
-  if(state.items.length>=max){toast(`Limite de ${max} itens atingido.`);return}
-  if(state.items.some(x=>x.code===p.code)){toast('Esse material já foi adicionado.');return}
-  state.items.push({...p,qty:1,note:''});renderItems();
-  $('materialSearch').value='';$('suggestions').style.display='none';
-}
-function renderItems(){
-  const el=$('items');
-  if(!state.items.length){el.innerHTML='<div style="text-align:center;color:#789;font-size:13px;padding:16px">Nenhum material adicionado.</div>';return}
-  el.innerHTML=state.items.map((p,i)=>`
-   <div class="item">
-    <div class="itemtop"><span class="num">${i+1}</span><div class="desc">${esc(p.description)}</div><button class="remove" onclick="removeItem(${i})">🗑</button></div>
-    <div class="itemmeta">${esc(p.code)} • Estoque: ${esc(p.stock)} ${esc(p.unit)}</div>
-    <div class="itembottom"><input class="qty" type="number" min="0.001" step="any" value="${esc(p.qty)}" onchange="state.items[${i}].qty=Number(this.value)"><select class="input" style="height:40px" onchange="state.items[${i}].note=this.value"><option value="">Observação</option>${OBSERVACOES.map(o=>`<option value="${esc(o)}" ${p.note===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div>
-   </div>`).join('');
-  $('summary').textContent=`${state.items.length} material(is) selecionado(s). Confira as quantidades antes de confirmar.`;
-}
+function renderNav(){return `<nav class="navbar"><button class="navbtn ${state.page==='home'?'active':''}" onclick="nav('home')"><span class="navicon">⌂</span>Início</button><button class="navbtn ${state.page==='new'?'active':''}" onclick="nav('new')"><span class="navicon">📦</span>Nova saída</button><button class="navbtn ${state.page==='return'?'active':''}" onclick="nav('return')"><span class="navicon">↩</span>Devolução</button><button class="navbtn ${state.page==='history'?'active':''}" onclick="nav('history')"><span class="navicon">◷</span>Histórico</button></nav>`}
+function renderHome(){state.page='home';const saidas=state.activities.filter(a=>a.kind==='saida').length;const devolucoes=state.activities.filter(a=>a.kind==='devolucao').length;$('content').innerHTML=`${renderNav()}<section class="dashboard"><div class="metric"><span class="label">📦 Produtos cadastrados</span><div class="value">—</div><div class="hint">itens na base</div></div><div class="metric"><span class="label">📊 Estoque disponível</span><div class="value">—</div><div class="hint">unidades</div></div><div class="metric"><span class="label">📤 Saídas hoje</span><div class="value">${saidas}</div><div class="hint">materiais</div></div></section><section class="section-card"><div class="section-head"><div><h3>🕘 Últimas movimentações</h3><p>Movimentações mais recentes no sistema.</p></div><button class="refresh" onclick="renderHome()">⟳ Atualizar</button></div><div class="activity-list">${renderActivities()}</div></section><div class="bottomnote">Grupo 360 Manutenção • Web App de estoque</div>`}
+function renderActivities(){if(!state.activities.length)return '<div class="empty">Nenhuma movimentação registrada neste celular.</div>';return state.activities.slice(0,8).map(a=>{const dev=a.kind==='devolucao';const title=esc(a.title||'Movimentação');const detail=esc(a.detail||'');return `<div class="activity"><div class="act-icon">${dev?'↩️':'⚙️'}</div><div class="act-main"><b>${title}</b><small>${detail}<br>${esc(a.when||'')}</small></div><span class="pill ${dev?'devolucao':'saida'}">${dev?'↩ Devolução':'↑ Saída'}</span></div>`}).join('')}
+function saveActivity(a){state.activities.unshift(a);state.activities=state.activities.slice(0,30);localStorage.setItem('estoque360_activities',JSON.stringify(state.activities))}
+function loadActivities(){try{return JSON.parse(localStorage.getItem('estoque360_activities')||'[]')}catch(e){return []}}
+function nowLabel(){return new Date().toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}
+function setDestination(type){state.destination=type;const os=$('destOS'),task=$('destTask');if(os){os.classList.toggle('active',type==='os');task.classList.toggle('active',type==='tarefa')}const lab=$('orderLabel'),inp=$('orderNumber');if(lab)lab.textContent=type==='os'?'Número da OS':'Número da tarefa';if(inp)inp.placeholder=type==='os'?'Ex.: 4505':'Ex.: 7821'}
+function renderNovaSaida(){state.items=[];$('content').innerHTML=`${renderNav()}<h2 class="page-title">Nova saída</h2><section class="panel"><div class="field"><label>Quem pediu / vai receber o material</label><input id="receiver" class="input" placeholder="Nome do colaborador"></div><div class="field"><label>Para onde foi</label><div class="choice-grid"><button id="destOS" class="choice active" onclick="setDestination('os')">📋 OS<small>Ordem de Serviço</small></button><button id="destTask" class="choice" onclick="setDestination('tarefa')">🔧 Tarefa<small>Ordem de Tarefa</small></button></div></div><div class="field"><label id="orderLabel">Número da OS</label><input id="orderNumber" class="input" inputmode="numeric" placeholder="Ex.: 4505"></div></section><section class="panel"><div class="limit">Materiais (máx. 15 por OS / 20 por tarefa)</div><div class="searchbox"><input id="materialSearch" class="input" placeholder="Digite o material, código ou marca" oninput="searchMaterial(this.value)"><div id="suggestions" class="suggestions" style="display:none"></div></div><div id="items" class="items" style="margin-top:10px"></div></section><section class="panel"><div class="summary" id="summary">Adicione os materiais que saíram do estoque.</div><button class="primary" style="margin-top:10px" onclick="confirmBaixa()">✓ REGISTRAR SAÍDA</button></section>`}
+let searchTimer;let materialRequestId=0;
+async function searchMaterial(q){clearTimeout(searchTimer);const box=$('suggestions'),term=q.trim();if(!term){materialRequestId++;box.style.display='none';return}if(term.length<2){box.style.display='none';return}const requestId=++materialRequestId;searchTimer=setTimeout(async()=>{try{const r=await jsonp({action:'products',q:term});if(requestId!==materialRequestId)return;if(!r.ok)throw new Error(r.error);const products=Array.isArray(r.products)?r.products:[];box.innerHTML=products.map(p=>`<button class="suggestion" onclick='addItem(${JSON.stringify(p)})'><span><b>${esc(p.code)}</b><small>${esc(p.description)}</small></span><span class="stock">Est.: ${esc(p.stock)}<br>${esc(p.unit)}</span></button>`).join('')||'<div class="suggestion">Nenhum material encontrado.</div>';box.style.display='block'}catch(e){if(requestId!==materialRequestId)return;toast(e.message)}},250)}
+function addItem(p){const max=state.destination==='os'?15:20;if(state.items.length>=max){toast(`Limite de ${max} itens atingido.`);return}if(state.items.some(x=>x.code===p.code)){toast('Esse material já foi adicionado.');return}state.items.push({...p,qty:1,note:''});renderItems();$('materialSearch').value='';$('suggestions').style.display='none'}
+function renderItems(){const el=$('items');if(!state.items.length){el.innerHTML='<div class="empty">Nenhum material adicionado.</div>';return}el.innerHTML=state.items.map((p,i)=>`<div class="item"><div class="itemtop"><span class="num">${i+1}</span><div class="desc">${esc(p.description)}</div><button class="remove" onclick="removeItem(${i})">🗑</button></div><div class="itemmeta">${esc(p.code)} • Estoque: ${esc(p.stock)} ${esc(p.unit)}</div><div class="itembottom"><input class="qty" type="number" min="0.001" step="any" value="${esc(p.qty)}" onchange="state.items[${i}].qty=Number(this.value)"><select class="input" style="height:42px" onchange="state.items[${i}].note=this.value"><option value="">Observação</option>${OBSERVACOES.map(o=>`<option value="${esc(o)}" ${p.note===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div></div>`).join('');$('summary').textContent=`${state.items.length} material(is) selecionado(s). Confira quantidade e observação antes de registrar.`}
 function removeItem(i){state.items.splice(i,1);renderItems()}
-
-function confirmBaixa(kind){
- const number=$('orderNumber').value.replace(/\D/g,'');
- const receiver=$('receiver').value.trim();
- if(!number){toast('Informe o número da ordem.');return}
- if(!receiver){toast('Informe quem vai receber o material.');return}
- if(!state.items.length){toast('Adicione pelo menos um material.');return}
- if(state.items.some(x=>!Number.isFinite(Number(x.qty))||Number(x.qty)<=0)){toast('Verifique as quantidades.');return}
- openModal(`<h3>Confirmar baixa</h3><div class="summary"><b>${kind==='os'?'OS':'Tarefa'} ${esc(number)}</b><br>Recebedor: ${esc(receiver)}<br>Materiais: ${state.items.length}</div><div class="modalactions"><button class="primary" onclick="doBaixa('${kind}','${esc(number)}','${esc(receiver)}')">CONFIRMAR</button><button class="secondary" onclick="closeModal()">CANCELAR</button></div>`);
-}
-async function doBaixa(kind,number,receiver){
- closeModal();toast('Enviando para a planilha...');
- const tx='WEB-'+Date.now()+'-'+Math.random().toString(36).slice(2,7).toUpperCase();
- try{
-   const apiType=kind==='task'?'tarefa':'os';
-   const r=await post({action:'baixa',tx,type:apiType,number,receiver,items:state.items.map(x=>({code:x.code,qty:Number(x.qty),unit:x.unit,note:x.note}))});
-   openModal(`<h3>✓ Baixa realizada</h3><div class="status">${esc(r.message||'Operação concluída.')}</div><button class="primary" onclick="closeModal();nav('${kind}')">NOVA BAIXA</button>`);
- }catch(e){openModal(`<h3>Não foi possível concluir</h3><div class="status err">${esc(e.message)}</div><button class="secondary" onclick="closeModal()">FECHAR</button>`)}
-}
-
-function renderReturn(){
- $('content').innerHTML=`
-  <h2 class="page-title">Devolução</h2>
-  <section class="panel">
-   <div class="field"><label>Tipo</label><div class="inputrow"><select id="returnType" class="select"><option value="os">OS</option><option value="tarefa">Tarefa</option></select></div></div>
-   <div class="field"><label>Número da OS ou Tarefa</label><input id="returnNumber" class="input" inputmode="numeric" placeholder="Ex.: 3952"></div>
-   <button class="primary orangebtn" onclick="findOrder()">🔎 LOCALIZAR</button>
-  </section>
-  <section id="returnResult"></section>`;
-}
-async function findOrder(){
- const type=$('returnType').value, number=$('returnNumber').value.replace(/\D/g,'');
- if(!number){toast('Informe o número.');return}
- $('returnResult').innerHTML='<section class="panel">Localizando materiais...</section>';
- try{
-   const r=await jsonp({action:'order',type,number});
-   if(!r.ok) throw new Error(r.error);
-   state.order=r;state.returnItems=r.items.map(x=>({...x,qty:0}));renderReturnResult();
- }catch(e){$('returnResult').innerHTML=`<section class="panel"><div class="status err">${esc(e.message)}</div></section>`}
-}
-function renderReturnResult(){
- const r=state.order;
- $('returnResult').innerHTML=`
-  <section class="panel">
-   <div class="order-found">✓ ${esc(r.label)} encontrada<br><small>Recebedor: ${esc(r.receiver||'Não informado')}</small></div>
-   <div class="items">${r.items.map((p,i)=>`
-    <div class="order-item"><div class="row"><div><b>${esc(p.description)}</b><br><small>${esc(p.code)} • Retirado: ${p.withdrawn} • Já devolvido: ${p.returned} • Disponível: ${p.available}</small></div><input class="returnqty" type="number" min="0" max="${p.available}" step="any" value="0" onchange="state.returnItems[${i}].qty=Number(this.value)"></div></div>`).join('')}</div>
-   <button class="primary greenbtn" style="margin-top:12px" onclick="confirmReturn()">✓ CONFIRMAR DEVOLUÇÃO</button>
-  </section>`;
-}
-function confirmReturn(){
- const items=state.returnItems.filter(x=>Number(x.qty)>0).map(x=>({code:x.code,qty:Number(x.qty)}));
- if(!items.length){toast('Informe pelo menos uma quantidade para devolver.');return}
- openModal(`<h3>Confirmar devolução</h3><div class="summary">${items.length} material(is) voltarão ao estoque.</div><div class="modalactions"><button class="primary greenbtn" onclick="doReturn()">CONFIRMAR DEVOLUÇÃO</button><button class="secondary" onclick="closeModal()">CANCELAR</button></div>`);
-}
-async function doReturn(){
- closeModal();toast('Registrando devolução...');
- const tx='DEV-'+Date.now()+'-'+Math.random().toString(36).slice(2,7).toUpperCase();
- try{
-   const r=await post({action:'devolucao',tx,type:state.order.type,number:state.order.number,items:state.returnItems.filter(x=>x.qty>0).map(x=>({code:x.code,qty:Number(x.qty)}))});
-   openModal(`<h3>✓ Devolução realizada</h3><div class="status">${esc(r.message||'Materiais devolvidos ao estoque.')}</div><button class="primary" onclick="closeModal();nav('return')">NOVA DEVOLUÇÃO</button>`);
- }catch(e){openModal(`<h3>Não foi possível concluir</h3><div class="status err">${esc(e.message)}</div><button class="secondary" onclick="closeModal()">FECHAR</button>`)}
-}
-
-function renderStock(){
- $('content').innerHTML=`
-  <h2 class="page-title">Estoque</h2><section class="panel">
-   <div class="searchbox"><input id="stockSearch" class="input" placeholder="Buscar material, código ou marca" oninput="searchStock(this.value)"><div id="stockSug" class="suggestions" style="display:none"></div></div>
-  </section><section id="stockList" class="panel"><div style="color:#789;font-size:13px">Digite para consultar.</div></section>`;
-}
-let stockTimer;
-let stockRequestId = 0;
-async function searchStock(q){
- clearTimeout(stockTimer);
- const box=$('stockSug'),list=$('stockList');
- const term=q.trim();
-
- if(!term){
-   stockRequestId++;
-   box.style.display='none';
-   list.innerHTML='<div style="color:#789;font-size:13px">Digite para consultar.</div>';
-   return;
- }
-
- // Evita consultas desnecessárias enquanto o usuário ainda está digitando.
- if(term.length < 2){
-   box.style.display='none';
-   return;
- }
-
- const requestId = ++stockRequestId;
-
- stockTimer=setTimeout(async()=>{
-  try{
-   const r=await jsonp({action:'products',q:term});
-
-   // Se uma consulta mais nova já foi iniciada, ignora esta resposta.
-   if(requestId !== stockRequestId) return;
-
-   if(!r.ok) throw new Error(r.error);
-
-   const products = Array.isArray(r.products) ? r.products : [];
-
-   list.innerHTML = products.length
-    ? products.map(p=>`<div class="order-item" style="margin-bottom:8px"><div class="row"><div><b>${esc(p.description)}</b><br><small>${esc(p.code)} • ${esc(p.brand||'')}</small></div><b>${esc(p.stock)} ${esc(p.unit)}</b></div></div>`).join('')
-    : '<div style="color:#789;font-size:13px">Nenhum material encontrado.</div>';
-
-  }catch(e){
-   // Nunca apaga uma lista válida por causa de uma resposta antiga/erro transitório.
-   if(requestId !== stockRequestId) return;
-   toast(e.message);
-  }
- },250);
-}
-
-function openModal(html){$('modalBox').innerHTML=html;$('modal').style.display='flex'}
-function closeModal(){$('modal').style.display='none'}
-$('modal').onclick=e=>{if(e.target===$('modal'))closeModal()}
-
-function digitWord(w){return ({zero:'0',um:'1',dois:'2',tres:'3','três':'3',quatro:'4',cinco:'5',seis:'6',sete:'7',oito:'8',nove:'9'})[w]??w}
-function spokenDigits(t){
- return t.replace(/\bzero\b/g,' 0 ').replace(/\bum\b/g,' 1 ').replace(/\bdois\b/g,' 2 ').replace(/\btres\b/g,' 3 ').replace(/\btrês\b/g,' 3 ').replace(/\bquatro\b/g,' 4 ').replace(/\bcinco\b/g,' 5 ').replace(/\bseis\b/g,' 6 ').replace(/\bsete\b/g,' 7 ').replace(/\boito\b/g,' 8 ').replace(/\bnove\b/g,' 9 ').replace(/\s+/g,' ').trim();
-}
-
+function confirmBaixa(){const number=$('orderNumber').value.replace(/\D/g,'');const receiver=$('receiver').value.trim();if(!number)return toast('Informe o número da OS/tarefa.');if(!receiver)return toast('Informe quem vai receber o material.');if(!state.items.length)return toast('Adicione pelo menos um material.');if(state.items.some(x=>!Number.isFinite(Number(x.qty))||Number(x.qty)<=0))return toast('Verifique as quantidades.');openModal(`<h3>Confirmar saída</h3><div class="summary"><b>${state.destination==='os'?'OS':'Tarefa'} ${esc(number)}</b><br>Recebedor: ${esc(receiver)}<br>Materiais: ${state.items.length}</div><div class="modalactions"><button class="primary" onclick="doBaixa()">CONFIRMAR SAÍDA</button><button class="secondary" onclick="closeModal()">CANCELAR</button></div>`)}
+async function doBaixa(){closeModal();toast('Enviando para a planilha...');const number=$('orderNumber').value.replace(/\D/g,'');const receiver=$('receiver').value.trim();const tx='WEB-'+Date.now()+'-'+Math.random().toString(36).slice(2,7).toUpperCase();try{const r=await post({action:'baixa',tx,type:state.destination,number,receiver,items:state.items.map(x=>({code:x.code,qty:Number(x.qty),unit:x.unit,note:x.note}))});saveActivity({kind:'saida',title:`${state.destination==='os'?'OS':'Tarefa'} ${number}`,detail:`${state.items.length} material(is) • ${receiver}`,when:nowLabel()});openModal(`<h3>✓ Saída realizada</h3><div class="status">${esc(r.message||'Operação concluída.')}</div><button class="primary" onclick="closeModal();nav('home')">VOLTAR AO INÍCIO</button>`)}catch(e){openModal(`<h3>Não foi possível concluir</h3><div class="status err">${esc(e.message)}</div><button class="secondary" onclick="closeModal()">FECHAR</button>`)}}
+function renderReturn(){$('content').innerHTML=`${renderNav()}<h2 class="page-title">Devolução</h2><section class="panel"><div class="field"><label>Tipo</label><select id="returnType" class="select"><option value="os">OS</option><option value="tarefa">Tarefa</option></select></div><div class="field"><label>Número da OS ou Tarefa</label><input id="returnNumber" class="input" inputmode="numeric" placeholder="Ex.: 4505"></div><button class="primary orangebtn" onclick="findOrder()">🔎 LOCALIZAR MATERIAIS</button></section><section id="returnResult"></section>`}
+async function findOrder(){const type=$('returnType').value,number=$('returnNumber').value.replace(/\D/g,'');if(!number)return toast('Informe o número.');$('returnResult').innerHTML='<section class="panel">Localizando materiais...</section>';try{const r=await jsonp({action:'order',type,number});if(!r.ok)throw new Error(r.error);state.order=r;state.returnItems=r.items.map(x=>({...x,qty:0}));renderReturnResult()}catch(e){$('returnResult').innerHTML=`<section class="panel"><div class="status err">${esc(e.message)}</div></section>`}}
+function renderReturnResult(){const r=state.order;$('returnResult').innerHTML=`<section class="panel"><div class="order-found">✓ ${esc(r.label)} encontrada<br><small>Recebedor: ${esc(r.receiver||'Não informado')}</small></div><div class="items">${r.items.map((p,i)=>`<div class="order-item"><div class="row"><div><b>${esc(p.description)}</b><br><small>${esc(p.code)} • Retirado: ${p.withdrawn} • Já devolvido: ${p.returned} • Disponível: ${p.available}</small></div><input class="returnqty" type="number" min="0" max="${p.available}" step="any" value="0" onchange="state.returnItems[${i}].qty=Number(this.value)"></div></div>`).join('')}</div><button class="primary greenbtn" style="margin-top:12px" onclick="confirmReturn()">✓ CONFIRMAR DEVOLUÇÃO</button></section>`}
+function confirmReturn(){const items=state.returnItems.filter(x=>Number(x.qty)>0).map(x=>({code:x.code,qty:Number(x.qty)}));if(!items.length)return toast('Informe pelo menos uma quantidade para devolver.');if(state.returnItems.some(x=>Number(x.qty)>Number(x.available)))return toast('A quantidade devolvida não pode ser maior que o disponível.');openModal(`<h3>Confirmar devolução</h3><div class="summary">${items.length} material(is) voltarão ao estoque.</div><div class="modalactions"><button class="primary greenbtn" onclick="doReturn()">CONFIRMAR DEVOLUÇÃO</button><button class="secondary" onclick="closeModal()">CANCELAR</button></div>`)}
+async function doReturn(){closeModal();toast('Registrando devolução...');const tx='DEV-'+Date.now()+'-'+Math.random().toString(36).slice(2,7).toUpperCase();const items=state.returnItems.filter(x=>x.qty>0).map(x=>({code:x.code,qty:Number(x.qty)}));try{const r=await post({action:'devolucao',tx,type:state.order.type,number:state.order.number,items});saveActivity({kind:'devolucao',title:`${state.order.type==='os'?'OS':'Tarefa'} ${state.order.number}`,detail:`${items.length} material(is) devolvido(s) • ${state.order.receiver||'Recebedor não informado'}`,when:nowLabel()});openModal(`<h3>✓ Devolução realizada</h3><div class="status">${esc(r.message||'Materiais devolvidos ao estoque.')}</div><button class="primary" onclick="closeModal();nav('home')">VOLTAR AO INÍCIO</button>`)}catch(e){openModal(`<h3>Não foi possível concluir</h3><div class="status err">${esc(e.message)}</div><button class="secondary" onclick="closeModal()">FECHAR</button>`)}}
+function renderStock(){$('content').innerHTML=`${renderNav()}<h2 class="page-title">Consultar estoque</h2><section class="panel"><div class="searchbox"><input id="stockSearch" class="input" placeholder="Buscar material, código, marca ou família" oninput="searchStock(this.value)"><div id="stockSug" class="suggestions" style="display:none"></div></div></section><section id="stockList" class="panel"><div class="empty">Digite pelo menos 2 caracteres para consultar.</div></section>`}
+let stockTimer;let stockRequestId=0;
+async function searchStock(q){clearTimeout(stockTimer);const box=$('stockSug'),list=$('stockList'),term=q.trim();if(!term){stockRequestId++;box.style.display='none';list.innerHTML='<div class="empty">Digite pelo menos 2 caracteres para consultar.</div>';return}if(term.length<2){box.style.display='none';return}const requestId=++stockRequestId;stockTimer=setTimeout(async()=>{try{const r=await jsonp({action:'products',q:term});if(requestId!==stockRequestId)return;if(!r.ok)throw new Error(r.error);const products=Array.isArray(r.products)?r.products:[];list.innerHTML=products.length?products.map(p=>`<div class="order-item" style="margin-bottom:8px"><div class="row"><div><b>${esc(p.description)}</b><br><small>${esc(p.code)} • ${esc(p.brand||'')}</small></div><b>${esc(p.stock)} ${esc(p.unit)}</b></div></div>`).join(''):'<div class="empty">Nenhum material encontrado.</div>'}catch(e){if(requestId!==stockRequestId)return;toast(e.message)}},250)}
+function renderHistory(){const all=state.activities.slice();$('content').innerHTML=`${renderNav()}<h2 class="page-title">Histórico</h2><section class="panel"><div class="summary">Nesta primeira versão, o histórico mostrado aqui é o histórico de movimentações registradas por este celular. O histórico completo da planilha poderá ser ligado a uma consulta própria da API na próxima etapa.</div></section><section class="section-card" style="margin-top:0"><div class="section-head"><div><h3>Movimentações</h3><p>${all.length} registro(s) neste aparelho.</p></div><button class="refresh" onclick="renderHistory()">Atualizar</button></div><div class="activity-list">${renderActivities()}</div></section>`}
+function openModal(html){$('modalBox').innerHTML=html;$('modal').style.display='flex'}function closeModal(){$('modal').style.display='none'}$('modal').onclick=e=>{if(e.target===$('modal'))closeModal()}
 renderHome();
 </script>
 </body>
