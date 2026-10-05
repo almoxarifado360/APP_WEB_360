@@ -621,7 +621,7 @@ function renderHome(){state.page='home';$('content').innerHTML=`
   <div class="activity-list">${renderActivities()}</div>
 </section>
 <div class="bottomnote">Grupo 360 Manutenção • Web App de estoque</div>`}
-function renderActivities(){if(!state.activities.length)return '<div class="empty">Nenhuma movimentação registrada neste celular.</div>';return state.activities.slice(0,8).map(a=>{const dev=a.kind==='devolucao';const ent=a.kind==='entrada';const title=esc(a.title||'Movimentação');const detail=esc(a.detail||'');return `<div class="activity"><div class="act-icon">${dev?'↩️':ent?'📥':'⚙️'}</div><div class="act-main"><b>${title}</b><small>${detail}<br>${esc(a.when||'')}</small></div><span class="pill ${dev?'devolucao':ent?'entrada':'saida'}">${dev?'↩ Devolução':ent?'↓ Entrada':'↑ Saída'}</span></div>`}).join('')}
+function renderActivities(){if(!state.activities.length)return '<div class="empty">Nenhuma movimentação encontrada no sistema.</div>';return state.activities.slice(0,8).map(a=>{const dev=a.kind==='devolucao';const ent=a.kind==='entrada';const title=esc(a.title||'Movimentação');const detail=esc(a.detail||'');return `<div class="activity"><div class="act-icon">${dev?'↩️':ent?'📥':'⚙️'}</div><div class="act-main"><b>${title}</b><small>${detail}<br>${esc(a.when||'')}</small></div><span class="pill ${dev?'devolucao':ent?'entrada':'saida'}">${dev?'↩ Devolução':ent?'↓ Entrada':'↑ Saída'}</span></div>`}).join('')}
 function saveActivity(a){state.activities.unshift(a);state.activities=state.activities.slice(0,30);localStorage.setItem('estoque360_activities',JSON.stringify(state.activities))}
 function loadActivities(){try{return JSON.parse(localStorage.getItem('estoque360_activities')||'[]')}catch(e){return []}}
 function nowLabel(){return new Date().toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}
@@ -709,12 +709,27 @@ async function doReturn(){closeModal();toast('Registrando devolução...');const
 function renderStock(){$('content').innerHTML=`<section class="stock-page"><div class="stock-head"><div><h2>🔎 Materiais em estoque</h2><span id="stockCount">Pesquise por material, código, marca ou fabricante.</span></div></div><section class="panel stock-search-panel"><div class="searchbox"><input id="stockSearch" class="input stock-search" placeholder="🔎 Procurar material, código, marca ou fabricante..." oninput="searchStock(this.value)"><div id="stockSug" class="suggestions" style="display:none"></div></div></section><section id="stockList" class="stock-table-wrap"><div class="stock-empty">🔎 Digite pelo menos 2 caracteres para consultar o estoque.</div></section></section>`}
 let stockTimer;let stockRequestId=0;
 async function searchStock(q){clearTimeout(stockTimer);const list=$('stockList'),count=$('stockCount'),term=q.trim();if(!term){stockRequestId++;list.innerHTML='<div class="stock-empty">🔎 Digite pelo menos 2 caracteres para consultar o estoque.</div>';count.textContent='Pesquise por material, código, marca ou fabricante.';return}if(term.length<2){count.textContent='Digite mais um caractere para pesquisar.';return}const requestId=++stockRequestId;stockTimer=setTimeout(async()=>{try{const r=await jsonp({action:'products',q:term});if(requestId!==stockRequestId)return;if(!r.ok)throw new Error(r.error);const products=Array.isArray(r.products)?r.products:[];count.textContent=`${products.length} material(is) encontrado(s)`;list.innerHTML=products.length?`<div class="stock-table"><div class="stock-row stock-header"><div>Código</div><div>Material</div><div>Marca</div><div>Estoque</div></div>${products.map(p=>{const n=Number(p.stock)||0;const status=n<=0?'sem':(n<=3?'baixo':'ok');const statusText=status==='sem'?'SEM ESTOQUE':status==='baixo'?'ESTOQUE BAIXO':'DISPONÍVEL';const icon=status==='ok'?'🟢':status==='baixo'?'🟠':'🔴';return `<div class="stock-row"><div class="stock-code">${esc(p.code)}</div><div class="stock-material"><b>${esc(p.description)}</b><small>${p.brand?`Fab.: ${esc(p.brand)}`:''}</small></div><div class="stock-brand">${esc(p.brand||'—')}</div><div class="stock-balance"><strong>${esc(p.stock)}</strong><small>${esc(p.unit||'UN')}</small><span class="stock-status ${status}">${icon} ${statusText}</span></div></div>`}).join('')}</div>`:'<div class="stock-empty">❌ Nenhum material encontrado.</div>'}catch(e){if(requestId!==stockRequestId)return;toast(e.message)}},250)}
-function renderToday(){
+async function renderToday(){
+  state.page='today';
   const today=new Date().toLocaleDateString('pt-BR');
-  const saidas=state.activities.filter(a=>a.kind==='saida' && String(a.when||'').startsWith(today));
-  $('content').innerHTML=`<h2 class="page-title">Saídas hoje</h2><section class="panel"><div class="summary">Saídas registradas neste aparelho em <b>${esc(today)}</b>.</div></section><section class="section-card" style="margin-top:0"><div class="section-head"><div><h3>📤 Saídas</h3><p>${saidas.length} registro(s) neste aparelho.</p></div><button class="refresh" onclick="renderToday()">⟳ Atualizar</button></div><div class="activity-list">${saidas.length?saidas.map(a=>{const title=esc(a.title||'Saída');const detail=esc(a.detail||'');return `<div class="activity"><div class="act-icon">📤</div><div class="act-main"><b>${title}</b><small>${detail}<br>${esc(a.when||'')}</small></div><span class="pill saida">↑ Saída</span></div>`}).join(''):'<div class="empty">Nenhuma saída registrada neste aparelho hoje.</div>'}</div></section>`
+  $('content').innerHTML=`<h2 class="page-title">📤 Saídas hoje</h2><section class="panel"><div class="summary">Saídas registradas no sistema em <b>${esc(today)}</b>.</div></section><section class="section-card" style="margin-top:0"><div class="section-head"><div><h3>📤 Saídas</h3><p>Movimentações do sistema.</p></div><button class="refresh" onclick="renderToday()">⟳ Atualizar</button></div><div id="todayActivities" class="activity-list"><div class="empty">Carregando...</div></div></section>`;
+  try{
+    const r=await jsonp({action:'recent',limit:30});
+    if(!r.ok)throw new Error(r.error||'Não foi possível carregar as movimentações.');
+    const items=(r.movements||[]).map(activityFromMovement).filter(a=>a.kind==='saida' && String(a.when||'').startsWith(today));
+    $('todayActivities').innerHTML=items.length?renderActivitiesFrom(items):'<div class="empty">Nenhuma saída registrada hoje.</div>';
+  }catch(e){$('todayActivities').innerHTML=`<div class="status err">${esc(e.message)}</div>`}
 }
-function renderHistory(){const all=state.activities.slice();$('content').innerHTML=`<h2 class="page-title">Histórico</h2><section class="panel"><div class="summary">Nesta primeira versão, o histórico mostrado aqui é o histórico de movimentações registradas por este celular. O histórico completo da planilha poderá ser ligado a uma consulta própria da API na próxima etapa.</div></section><section class="section-card" style="margin-top:0"><div class="section-head"><div><h3>Movimentações</h3><p>${all.length} registro(s) neste aparelho.</p></div><button class="refresh" onclick="renderHistory()">Atualizar</button></div><div class="activity-list">${renderActivities()}</div></section>`}
+async function renderHistory(){
+  state.page='history';
+  $('content').innerHTML=`<h2 class="page-title">Histórico</h2><section class="section-card"><div class="section-head"><div><h3>🕘 Movimentações</h3><p>Histórico central do sistema.</p></div><button class="refresh" onclick="renderHistory()">⟳ Atualizar</button></div><div id="historyActivities" class="activity-list"><div class="empty">Carregando...</div></div></section>`;
+  try{
+    const r=await jsonp({action:'recent',limit:30});
+    if(!r.ok)throw new Error(r.error||'Não foi possível carregar o histórico.');
+    state.activities=(r.movements||[]).map(activityFromMovement);
+    $('historyActivities').innerHTML=renderActivities();
+  }catch(e){$('historyActivities').innerHTML=`<div class="status err">${esc(e.message)}</div>`}
+}
 function openModal(html){$('modalBox').innerHTML=html;$('modal').style.display='flex'}function closeModal(){$('modal').style.display='none'}$('modal').onclick=e=>{if(e.target===$('modal'))closeModal()}
 
 const v14Style=document.createElement('style');v14Style.textContent=`
@@ -952,8 +967,11 @@ renderHome();
 </script>
 <script>
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('./sw.js');
+      if (reg && reg.update) await reg.update();
+    } catch (e) {}
   });
 }
 </script>
