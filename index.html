@@ -716,6 +716,238 @@ function renderToday(){
 }
 function renderHistory(){const all=state.activities.slice();$('content').innerHTML=`<h2 class="page-title">Histórico</h2><section class="panel"><div class="summary">Nesta primeira versão, o histórico mostrado aqui é o histórico de movimentações registradas por este celular. O histórico completo da planilha poderá ser ligado a uma consulta própria da API na próxima etapa.</div></section><section class="section-card" style="margin-top:0"><div class="section-head"><div><h3>Movimentações</h3><p>${all.length} registro(s) neste aparelho.</p></div><button class="refresh" onclick="renderHistory()">Atualizar</button></div><div class="activity-list">${renderActivities()}</div></section>`}
 function openModal(html){$('modalBox').innerHTML=html;$('modal').style.display='flex'}function closeModal(){$('modal').style.display='none'}$('modal').onclick=e=>{if(e.target===$('modal'))closeModal()}
+
+const v14Style=document.createElement('style');v14Style.textContent=`
+.activity.clickable{cursor:pointer;position:relative}
+.activity.clickable:active{transform:scale(.99)}
+.activity .chev{font-size:22px;color:#8aa0b5;margin-left:4px}
+.movement-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.movement-actions .primary,.movement-actions .secondary{min-height:44px}
+.movement-detail{font-size:13px;line-height:1.5}
+.movement-detail .mvline{padding:8px 0;border-bottom:1px solid #edf1f5}
+.movement-detail .mvline:last-child{border-bottom:0}
+.editbar{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.editbar button{border:0;background:#fff;color:#155da8;font-weight:800}
+.status-cancelada{opacity:.6}
+.status-editada{opacity:.75}
+`;document.head.appendChild(v14Style);
+/* ===== ESTOQUE 360 V14 — MOVIMENTAÇÕES CLICÁVEIS / EDITAR / DESFAZER ===== */
+function formatServerDate(v){
+  if(!v)return '';
+  const d=new Date(v);
+  if(Number.isNaN(d.getTime()))return String(v);
+  return d.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+}
+function activityFromMovement(m){
+  const kind=m.kind==='entrada'?'entrada':m.kind==='devolucao'?'devolucao':'saida';
+  return {
+    kind,
+    title:m.title||'Movimentação',
+    detail:m.detail||'',
+    when:formatServerDate(m.when),
+    tx:m.tx,
+    status:m.status||'ATIVA',
+    movement:m
+  };
+}
+async function refreshRecent(){
+  try{
+    const r=await jsonp({action:'recent',limit:12});
+    if(!r.ok)throw new Error(r.error||'Não foi possível carregar as movimentações.');
+    state.activities=(r.movements||[]).map(activityFromMovement);
+    renderActivitiesIntoCurrent();
+  }catch(e){
+    // Mantém o conteúdo local caso a consulta temporariamente falhe.
+  }
+}
+function renderActivitiesIntoCurrent(){
+  const el=$('recentActivities');
+  if(el)el.innerHTML=renderActivities();
+}
+function renderActivities(){
+  if(!state.activities.length)return '<div class="empty">Nenhuma movimentação encontrada.</div>';
+  return state.activities.slice(0,8).map(a=>{
+    const dev=a.kind==='devolucao', ent=a.kind==='entrada';
+    const status=String(a.status||'ATIVA').toUpperCase();
+    const cls=status==='CANCELADA'?'status-cancelada':status==='EDITADA'?'status-editada':'';
+    const pillClass=dev?'devolucao':ent?'entrada':'saida';
+    const pillText=dev?'↩ Devolução':ent?'↓ Entrada':'↑ Saída';
+    return `<div class="activity clickable ${cls}" onclick="openMovement('${esc(a.tx||'')}')">
+      <div class="act-icon">${dev?'↩️':ent?'📥':'📤'}</div>
+      <div class="act-main"><b>${esc(a.title||'Movimentação')}</b><small>${esc(a.detail||'')}<br>${esc(a.when||'')}</small></div>
+      <span class="pill ${pillClass}">${pillText}</span><span class="chev">›</span>
+    </div>`;
+  }).join('');
+}
+function renderHome(){
+  state.page='home';
+  $('content').innerHTML=`
+  <section class="home-grid">
+    <button class="navbtn active" onclick="nav('home')"><span class="navicon">🏠</span>Início</button>
+    <button class="navbtn" onclick="nav('new')"><span class="navicon">📦</span>Nova saída</button>
+    <button class="navbtn" onclick="nav('return')"><span class="navicon">↩️</span>Devolução</button>
+    <button class="navbtn" onclick="nav('stock')"><span class="navicon">🔎</span>Consultar estoque</button>
+    <button class="navbtn" onclick="openSheetTab('94981911')"><span class="navicon">📋</span>Inventário</button>
+    <button class="navbtn" onclick="nav('entry')"><span class="navicon">📥</span>Entrada produtos</button>
+    <button class="navbtn" onclick="renderToday()"><span class="navicon">📤</span>Saídas hoje</button>
+    <button class="navbtn" onclick="nav('history')"><span class="navicon">🕘</span>Histórico</button>
+  </section>
+  <section class="section-card">
+    <div class="section-head">
+      <div><h3>🕘 Últimas movimentações</h3><p>Movimentações mais recentes no sistema.</p></div>
+      <button class="refresh" onclick="refreshRecent()">⟳ Atualizar</button>
+    </div>
+    <div id="recentActivities" class="activity-list">${renderActivities()}</div>
+  </section>
+  <div class="bottomnote">Grupo 360 Manutenção • Web App de estoque</div>`;
+  refreshRecent();
+}
+function openMovement(tx){
+  if(!tx)return;
+  toast('Carregando movimentação...');
+  jsonp({action:'movement',tx}).then(m=>{
+    if(!m.ok)throw new Error(m.error||'Movimentação não encontrada.');
+    showMovementModal(m);
+  }).catch(e=>openModal(`<h3>Não foi possível abrir</h3><div class="status err">${esc(e.message)}</div><button class="secondary" onclick="closeModal()">FECHAR</button>`));
+}
+function showMovementModal(m){
+  const dev=m.kind==='devolucao', ent=m.kind==='entrada';
+  const status=String(m.status||'ATIVA').toUpperCase();
+  const items=(m.items||[]).map(i=>`<div class="mvline"><b>${esc(i.description)}</b><br><small>${esc(i.code)} • ${esc(i.qty)} ${esc(i.unit||'UN')}</small></div>`).join('');
+  let meta=ent?`Fornecedor: <b>${esc(m.supplier||'—')}</b><br>NF-e: <b>${esc(m.nf||'—')}</b>`:`${m.title||''}<br>Recebedor: <b>${esc(m.receiver||'—')}</b>`;
+  const canEdit=status==='ATIVA';
+  openModal(`<h3>${dev?'↩️':ent?'📥':'📤'} ${esc(m.title||'Movimentação')}</h3>
+    <div class="movement-detail">
+      <div class="mvline">${meta}</div>
+      <div class="mvline">Data: <b>${esc(formatServerDate(m.when))}</b><br>Operador: <b>${esc(m.operator||'—')}</b><br>Status: <b>${esc(status)}</b></div>
+      <div class="mvline"><b>Materiais</b>${items||'<div>Sem itens.</div>'}</div>
+    </div>
+    ${canEdit?`<div class="movement-actions">
+      <button class="primary" onclick="startEditMovement(${JSON.stringify(m).replace(/</g,'\\u003c')})">✏️ EDITAR</button>
+      <button class="secondary" onclick="confirmCancelMovement('${esc(m.tx)}')">↩️ DESFAZER</button>
+      <button class="secondary" style="grid-column:1/-1" onclick="confirmCancelMovement('${esc(m.tx)}',true)">🗑️ EXCLUIR MOVIMENTAÇÃO</button>
+    </div>`:`<div class="status">Esta movimentação já está ${esc(status.toLowerCase())}.</div>`}
+    <button class="secondary" style="margin-top:10px;width:100%" onclick="closeModal()">FECHAR</button>`);
+}
+function confirmCancelMovement(tx,deleteLabel){
+  closeModal();
+  openModal(`<h3>${deleteLabel?'🗑️ Excluir':'↩️ Desfazer'} movimentação?</h3>
+    <div class="summary">A operação original não será apagada fisicamente. O sistema vai estornar o efeito dela no estoque e registrar a ação no histórico.</div>
+    <div class="modalactions"><button class="primary" onclick="cancelMovement('${esc(tx)}')">${deleteLabel?'CONFIRMAR EXCLUSÃO':'CONFIRMAR DESFAZER'}</button><button class="secondary" onclick="closeModal()">CANCELAR</button></div>`);
+}
+async function cancelMovement(originalTx){
+  closeModal();toast('Estornando movimentação...');
+  const tx='CAN-'+Date.now()+'-'+Math.random().toString(36).slice(2,7).toUpperCase();
+  try{
+    const r=await post({action:'cancelar',tx,originalTx});
+    await refreshRecent();
+    openModal(`<h3>✓ Movimentação desfeita</h3><div class="status">${esc(r.message||'Estoque estornado.')}</div><button class="primary" onclick="closeModal();nav('home')">VOLTAR AO INÍCIO</button>`);
+  }catch(e){openModal(`<h3>Não foi possível desfazer</h3><div class="status err">${esc(e.message)}</div><button class="secondary" onclick="closeModal()">FECHAR</button>`)}
+}
+function startEditMovement(tx){
+  closeModal();
+  jsonp({action:'movement',tx}).then(m=>{
+    if(!m.ok)throw new Error(m.error||'Movimentação não encontrada.');
+    state.editMovement=m;
+    state.editItems=(m.items||[]).map(x=>({...x}));
+    if(m.kind==='entrada')return renderEditEntrada(m);
+    if(m.kind==='devolucao')return renderEditDevolucao(m);
+    return renderEditSaida(m);
+  }).catch(e=>openModal(`<h3>Não foi possível editar</h3><div class="status err">${esc(e.message)}</div><button class="secondary" onclick="closeModal()">FECHAR</button>`));
+}
+function editBack(){state.editMovement=null;state.editItems=[];nav('home')}
+function renderEditSaida(m){
+  state.page='edit';$('backBtn').hidden=false;
+  $('content').innerHTML=`<div class="editbar"><button onclick="editBack()">← Voltar</button><h2 class="page-title" style="margin:0">✏️ Editar saída</h2></div>
+  <section class="panel"><div class="field"><label>Quem pediu / vai receber</label><input id="editReceiver" class="input" value="${esc(m.receiver||'')}"></div>
+  <div class="field"><label>Destino</label><div class="choice-grid"><button id="editOS" class="choice ${m.type==='os'?'active':''}" onclick="setEditType('os')">📋 OS</button><button id="editTask" class="choice ${m.type==='tarefa'?'active':''}" onclick="setEditType('tarefa')">🔧 Tarefa</button></div></div>
+  <div class="field"><label>Número</label><input id="editNumber" class="input" inputmode="numeric" value="${esc(m.number||'')}"></div></section>
+  <section class="panel"><div class="searchbox"><input id="editSearch" class="input" placeholder="Adicionar material..." oninput="searchEditMaterial(this.value)"><div id="editSuggestions" class="suggestions" style="display:none"></div></div><div id="editItems" class="items" style="margin-top:10px"></div></section>
+  <section class="panel"><div class="summary">A edição estorna a saída original e aplica a nova versão em uma única operação.</div><button class="primary" onclick="confirmEdit()">✓ SALVAR ALTERAÇÕES</button></section>`;
+  state.editType=m.type||'os';renderEditItems();
+}
+function setEditType(type){state.editType=type;$('editOS').classList.toggle('active',type==='os');$('editTask').classList.toggle('active',type==='tarefa')}
+async function searchEditMaterial(q){
+  const box=$('editSuggestions'),term=q.trim();
+  if(!term){box.style.display='none';return}
+  if(term.length<2){box.style.display='none';return}
+  try{
+    const r=await jsonp({action:'products',q:term});if(!r.ok)throw new Error(r.error);
+    box.innerHTML=(r.products||[]).map(p=>`<button class="suggestion" onclick='addEditItem(${JSON.stringify(p)})'><span><b>${esc(p.code)}</b><small>${esc(p.description)}</small></span><span class="stock">Est.: ${esc(p.stock)}<br>${esc(p.unit)}</span></button>`).join('')||'<div class="suggestion">Nenhum material encontrado.</div>';
+    box.style.display='block';
+  }catch(e){toast(e.message)}
+}
+function addEditItem(p){
+  if(state.editItems.some(x=>x.code===p.code)){toast('Esse material já está na movimentação.');return}
+  state.editItems.push({...p,qty:1,note:''});renderEditItems();$('editSearch').value='';$('editSuggestions').style.display='none';
+}
+function renderEditItems(){
+  const el=$('editItems');if(!el)return;
+  if(!state.editItems.length){el.innerHTML='<div class="empty">Nenhum material.</div>';return}
+  el.innerHTML=state.editItems.map((p,i)=>`<div class="item"><div class="itemtop"><span class="num">${i+1}</span><div class="desc">${esc(p.description)}</div><button class="remove" onclick="removeEditItem(${i})">🗑</button></div><div class="itemmeta">${esc(p.code)} • ${esc(p.unit||'UN')}</div><div class="itembottom"><input class="qty" type="number" min="0.001" step="any" value="${esc(p.qty)}" onchange="state.editItems[${i}].qty=Number(this.value)"><select class="input" style="height:42px" onchange="state.editItems[${i}].note=this.value"><option value="">Observação</option>${OBSERVACOES.map(o=>`<option value="${esc(o)}" ${p.note===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div></div>`).join('');
+}
+function removeEditItem(i){state.editItems.splice(i,1);renderEditItems()}
+function renderEditEntrada(m){
+  state.page='edit';$('backBtn').hidden=false;
+  $('content').innerHTML=`<div class="editbar"><button onclick="editBack()">← Voltar</button><h2 class="page-title" style="margin:0">✏️ Editar entrada</h2></div>
+  <section class="panel"><div class="field"><label>Fornecedor</label><input id="editSupplier" class="input" value="${esc(m.supplier||'')}"></div><div class="field"><label>NF-e</label><input id="editNF" class="input" value="${esc(m.nf||'')}"></div></section>
+  <section class="panel"><div class="searchbox"><input id="editEntrySearch" class="input" placeholder="Adicionar material..." oninput="searchEditEntryMaterial(this.value)"><div id="editEntrySuggestions" class="suggestions" style="display:none"></div></div><div id="editEntryItems" class="items" style="margin-top:10px"></div></section>
+  <section class="panel"><div class="field"><label>Observação</label><input id="editObservation" class="input" value="${esc(m.note||'')}"></div><button class="primary greenbtn" onclick="confirmEdit()">✓ SALVAR ALTERAÇÕES</button></section>`;
+  renderEditEntryItems();
+}
+async function searchEditEntryMaterial(q){
+  const box=$('editEntrySuggestions'),term=q.trim();if(!term){box.style.display='none';return}if(term.length<2){box.style.display='none';return}
+  try{const r=await jsonp({action:'products',q:term});if(!r.ok)throw new Error(r.error);box.innerHTML=(r.products||[]).map(p=>`<button class="suggestion" onclick='addEditEntryItem(${JSON.stringify(p)})'><span><b>${esc(p.code)}</b><small>${esc(p.description)}</small></span><span class="stock">Est.: ${esc(p.stock)}<br>${esc(p.unit)}</span></button>`).join('')||'<div class="suggestion">Nenhum material encontrado.</div>';box.style.display='block'}catch(e){toast(e.message)}
+}
+function addEditEntryItem(p){if(state.editItems.some(x=>x.code===p.code)){toast('Esse material já está na entrada.');return}state.editItems.push({...p,qty:1,note:''});renderEditEntryItems();$('editEntrySearch').value='';$('editEntrySuggestions').style.display='none'}
+function renderEditEntryItems(){const el=$('editEntryItems');if(!el)return;if(!state.editItems.length){el.innerHTML='<div class="empty">Nenhum material.</div>';return}el.innerHTML=state.editItems.map((p,i)=>`<div class="item"><div class="itemtop"><span class="num">${i+1}</span><div class="desc">${esc(p.description)}</div><button class="remove" onclick="removeEditItem(${i})">🗑</button></div><div class="itemmeta">${esc(p.code)} • ${esc(p.unit||'UN')}</div><div class="itembottom"><input class="qty" type="number" min="0.001" step="any" value="${esc(p.qty)}" onchange="state.editItems[${i}].qty=Number(this.value)"><select class="input" style="height:42px" onchange="state.editItems[${i}].note=this.value"><option value="">Observação</option>${OBSERVACOES.map(o=>`<option value="${esc(o)}" ${p.note===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div></div>`).join('')}
+function renderEditDevolucao(m){
+  state.page='edit';$('backBtn').hidden=false;
+  $('content').innerHTML=`<div class="editbar"><button onclick="editBack()">← Voltar</button><h2 class="page-title" style="margin:0">✏️ Editar devolução</h2></div>
+  <section class="panel"><div class="summary"><b>${esc(m.title)}</b><br>Altere as quantidades que devem voltar ao estoque.</div><div id="editItems" class="items" style="margin-top:10px"></div><button class="primary greenbtn" onclick="confirmEdit()">✓ SALVAR ALTERAÇÕES</button></section>`;
+  renderEditItems();
+}
+function confirmEdit(){
+  const m=state.editMovement;
+  if(!m)return;
+  const items=state.editItems.filter(x=>Number(x.qty)>0).map(x=>({code:x.code,qty:Number(x.qty),unit:x.unit,note:x.note||''}));
+  if(!items.length)return toast('Informe pelo menos um material.');
+  if(state.editItems.some(x=>!Number.isFinite(Number(x.qty))||Number(x.qty)<=0))return toast('Verifique as quantidades.');
+  if(m.kind==='saida'){
+    const number=$('editNumber').value.replace(/\D/g,'');const receiver=$('editReceiver').value.trim();
+    if(!number||!receiver)return toast('Informe número e recebedor.');
+    openModal(`<h3>Salvar edição?</h3><div class="summary">${esc(state.editType==='os'?'OS':'Tarefa')} ${esc(number)}<br>${esc(receiver)}<br>${items.length} material(is)</div><div class="modalactions"><button class="primary" onclick="doEdit()">CONFIRMAR EDIÇÃO</button><button class="secondary" onclick="closeModal()">CANCELAR</button></div>`);
+  }else if(m.kind==='entrada'){
+    const supplier=$('editSupplier').value.trim(),nf=$('editNF').value.trim();if(!supplier||!nf)return toast('Informe fornecedor e NF-e.');
+    openModal(`<h3>Salvar edição?</h3><div class="summary">NF-e ${esc(nf)}<br>${esc(supplier)}<br>${items.length} material(is)</div><div class="modalactions"><button class="primary greenbtn" onclick="doEdit()">CONFIRMAR EDIÇÃO</button><button class="secondary" onclick="closeModal()">CANCELAR</button></div>`);
+  }else{
+    openModal(`<h3>Salvar edição?</h3><div class="summary">${esc(m.title)}<br>${items.length} material(is)</div><div class="modalactions"><button class="primary greenbtn" onclick="doEdit()">CONFIRMAR EDIÇÃO</button><button class="secondary" onclick="closeModal()">CANCELAR</button></div>`);
+  }
+}
+async function doEdit(){
+  closeModal();toast('Aplicando edição...');
+  const m=state.editMovement;
+  const tx='EDIT-'+Date.now()+'-'+Math.random().toString(36).slice(2,7).toUpperCase();
+  let payload={action:'editar',tx,originalTx:m.tx,kind:m.kind,items:state.editItems.filter(x=>Number(x.qty)>0).map(x=>({code:x.code,qty:Number(x.qty),unit:x.unit,note:x.note||''}))};
+  if(m.kind==='saida'){payload.type=state.editType;payload.number=$('editNumber').value.replace(/\D/g,'');payload.receiver=$('editReceiver').value.trim()}
+  if(m.kind==='entrada'){payload.supplier=$('editSupplier').value.trim();payload.nf=$('editNF').value.trim();payload.observation=$('editObservation').value.trim()}
+  if(m.kind==='devolucao'){payload.type=m.type;payload.number=m.number}
+  try{const r=await post(payload);await refreshRecent();openModal(`<h3>✓ Movimentação editada</h3><div class="status">${esc(r.message||'Edição realizada com sucesso.')}</div><button class="primary" onclick="closeModal();nav('home')">VOLTAR AO INÍCIO</button>`)}
+  catch(e){openModal(`<h3>Não foi possível editar</h3><div class="status err">${esc(e.message)}</div><button class="secondary" onclick="closeModal()">FECHAR</button>`)}
+}
+function renderHistory(){
+  state.page='history';
+  $('content').innerHTML=`<h2 class="page-title">Histórico</h2><section class="section-card"><div class="section-head"><div><h3>🕘 Movimentações</h3><p>Histórico real do sistema.</p></div><button class="refresh" onclick="renderHistory()">⟳ Atualizar</button></div><div id="historyActivities" class="activity-list"><div class="empty">Carregando...</div></div></section>`;
+  jsonp({action:'recent',limit:30}).then(r=>{if(!r.ok)throw new Error(r.error);state.activities=(r.movements||[]).map(activityFromMovement);$('historyActivities').innerHTML=renderActivities()}).catch(e=>{$('historyActivities').innerHTML=`<div class="status err">${esc(e.message)}</div>`});
+}
+function renderToday(){
+  state.page='today';
+  $('content').innerHTML=`<h2 class="page-title">📤 Saídas hoje</h2><section class="section-card"><div class="section-head"><div><h3>📤 Saídas</h3><p>Saídas registradas no sistema.</p></div><button class="refresh" onclick="renderToday()">⟳ Atualizar</button></div><div id="todayActivities" class="activity-list"><div class="empty">Carregando...</div></div></section>`;
+  jsonp({action:'recent',limit:30}).then(r=>{if(!r.ok)throw new Error(r.error);const today=new Date().toLocaleDateString('pt-BR');const items=(r.movements||[]).map(activityFromMovement).filter(a=>a.kind==='saida'&&a.when.startsWith(today));$('todayActivities').innerHTML=items.length?renderActivitiesFrom(items):'<div class="empty">Nenhuma saída registrada hoje.</div>'}).catch(e=>{$('todayActivities').innerHTML=`<div class="status err">${esc(e.message)}</div>`});
+}
+function renderActivitiesFrom(items){return items.map(a=>{const cls=a.status==='CANCELADA'?'status-cancelada':a.status==='EDITADA'?'status-editada':'';return `<div class="activity clickable ${cls}" onclick="openMovement('${esc(a.tx)}')"><div class="act-icon">📤</div><div class="act-main"><b>${esc(a.title)}</b><small>${esc(a.detail)}<br>${esc(a.when)}</small></div><span class="pill saida">↑ Saída</span><span class="chev">›</span></div>`}).join('')}
+</script>
+
 renderHome();
 </script>
 <script>
