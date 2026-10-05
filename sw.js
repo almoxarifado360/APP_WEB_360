@@ -1,9 +1,8 @@
-const CACHE_NAME = 'estoque-360-v5';
+const CACHE_NAME = 'estoque-360-v6';
 const CORE = [
   './',
   './index.html',
   './manifest.json',
-  './logo-360-transparent.png',
   './icon-192.png',
   './icon-512.png'
 ];
