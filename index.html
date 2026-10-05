@@ -114,6 +114,16 @@ button{cursor:pointer}
   gap:14px;
   margin:0 0 26px;
 }
+.home-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin:0 0 26px;
+}
+.home-grid .navbtn{
+  min-height:78px;
+}
+
 .navbtn{
   border:1px solid #e2e7ed;
   background:#fff;
@@ -179,6 +189,12 @@ button{cursor:pointer}
 .metric .hint{
   display:none;
 }
+.home-consult{border:0;width:100%;font:inherit;color:inherit;cursor:pointer;text-align:left;position:relative;transition:transform .15s ease,box-shadow .15s ease}
+.home-consult:hover{transform:translateY(-1px)}
+.home-consult:active{transform:scale(.99)}
+.home-consult:before{content:'🔎';grid-column:1;grid-row:1 / span 2;width:66px;height:66px;border-radius:50%;background:#eef6ff;display:flex;align-items:center;justify-content:center;font-size:32px}
+.home-consult .label{grid-column:2;grid-row:1}
+.home-consult .value{grid-column:2;grid-row:2;font-size:20px;color:#2169d5}
 
 /* Ícone visual dos indicadores */
 .metric:before{
@@ -487,7 +503,10 @@ button{cursor:pointer}
 .status.err{background:#fff0ee;color:#bd3c2f}
 
 /* ===== TAMANHO DE CELULAR: referência direta do EPI 360 ===== */
+.stock-page{margin-top:2px}.stock-head{display:flex;align-items:end;justify-content:space-between;margin:0 0 12px}.stock-head h2{margin:0;font-size:27px;color:#142d47}.stock-head span{display:block;margin-top:4px;color:#67809a;font-size:14px}.stock-search-panel{padding:0;background:transparent;box-shadow:none;margin-bottom:10px}.stock-search{height:56px;border:2px solid #2169d5;border-radius:14px;font-size:16px}.stock-table-wrap{background:#fff;border-radius:14px;box-shadow:var(--shadow);overflow:auto}.stock-table{min-width:760px}.stock-row{display:grid;grid-template-columns:120px minmax(320px,1fr) 130px 190px;align-items:center;border-bottom:1px solid #dbe5ef;min-height:68px;padding:0 12px}.stock-header{min-height:40px;background:#14509a;color:#fff;font-weight:800;font-size:14px;border-bottom:0}.stock-code{font-weight:800;color:#0754a5;font-size:17px}.stock-material b{display:block;font-size:15px;font-weight:500;color:#142d47}.stock-material small{display:block;color:#5e7891;font-size:12px;margin-top:4px}.stock-brand{font-weight:800;font-size:13px;color:#142d47}.stock-balance{display:grid;grid-template-columns:auto auto;column-gap:6px;align-items:center}.stock-balance strong{font-size:20px;color:#142d47}.stock-balance small{font-size:12px;color:#67809a}.stock-status{grid-column:1 / span 2;display:inline-block;width:max-content;margin-top:3px;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:800}.stock-status.ok{background:#e7f7ee;color:#16804f}.stock-status.baixo{background:#fff4d8;color:#9b6a00}.stock-status.sem{background:#ffe9e7;color:#b52e25}.stock-empty{padding:28px 20px;text-align:center;color:#71879c;font-size:15px}.home-consult .value{white-space:nowrap}
 @media(max-width:600px){
+  .stock-head h2{font-size:22px}.stock-head span{font-size:12px}.stock-search{height:52px;font-size:14px}.stock-table-wrap{border-radius:14px}.stock-row{grid-template-columns:100px minmax(270px,1fr) 110px 160px}.home-consult .value{font-size:17px}
+
   .top{
     min-height:370px;
     padding:52px 18px 34px;
@@ -507,6 +526,7 @@ button{cursor:pointer}
   }
   .content{padding:24px 18px 32px}
   .navbar{gap:14px;margin-bottom:26px}
+  .home-grid{gap:14px;margin-bottom:26px}
   .navbtn{
     min-height:78px;
     border-radius:26px;
@@ -568,6 +588,9 @@ button{cursor:pointer}
 <iframe name="postFrame" id="postFrame" style="display:none"></iframe>
 <script>
 const API_URL='https://script.google.com/macros/s/AKfycbyxONwGIp_U8GnygyDBLEL6-UzfzXmeL31UzQ_QrKGis6h0h62h9T1j1IhHi0xEIZm2Yg/exec';
+const SHEET_URL='https://docs.google.com/spreadsheets/d/1XNNRj4cvv34yUITVWSpGmEg0gD1oqlSXGmvC-mKhOr4/edit';
+function openSheetTab(gid){window.open(SHEET_URL+'?gid='+encodeURIComponent(gid)+'#gid='+encodeURIComponent(gid),'_blank','noopener');}
+
 const OBSERVACOES=['Para tarefa externa','Para uso da oficina','Para enrolamento de motor','Para uso em OS','Para uso da automação','Para tarefa interna','Para vendas','Para uso na peritagem'];
 const state={page:'home',items:[],order:null,returnItems:[],destination:'os',activities:loadActivities()};
 const $=id=>document.getElementById(id);
@@ -576,10 +599,28 @@ function toast(msg){$('toast').textContent=msg;$('toast').style.display='block';
 function apiReady(){if(API_URL.startsWith('COLE_')){toast('Configure a URL da API no index.html.');return false}return true}
 function jsonp(params){return new Promise((resolve,reject)=>{if(!apiReady())return reject(new Error('API não configurada.'));const cb='cb_'+Date.now()+'_'+Math.random().toString(36).slice(2);const script=document.createElement('script');const qs=new URLSearchParams({...params,callback:cb});const timer=setTimeout(()=>{cleanup();reject(new Error('Tempo esgotado ao consultar a planilha.'))},30000);function cleanup(){clearTimeout(timer);delete window[cb];script.remove()}window[cb]=data=>{cleanup();resolve(data)};script.onerror=()=>{cleanup();reject(new Error('Não foi possível conectar à API.'))};script.src=API_URL+'?'+qs.toString();document.body.appendChild(script)})}
 function post(payload){return new Promise((resolve,reject)=>{if(!apiReady())return reject(new Error('API não configurada.'));const form=document.createElement('form');form.method='POST';form.action=API_URL;form.target='postFrame';form.style.display='none';const input=document.createElement('input');input.type='hidden';input.name='payload';input.value=JSON.stringify(payload);form.appendChild(input);document.body.appendChild(form);form.submit();form.remove();const started=Date.now();const poll=async()=>{try{const r=await jsonp({action:'status',tx:payload.tx});if(r.ok&&(r.status==='CONCLUIDO'||r.status==='ERRO'))return r.status==='CONCLUIDO'?resolve(r.result||r):reject(new Error(r.message||'Falha na operação.'))}catch(e){}if(Date.now()-started>25000)return reject(new Error('A planilha não confirmou a operação no tempo esperado.'));setTimeout(poll,1000)};setTimeout(poll,900)})}
-function nav(page){state.page=page;closeModal();if(page==='home')renderHome();if(page==='new')renderNovaSaida();if(page==='return')renderReturn();if(page==='stock')renderStock();if(page==='history')renderHistory();$('backBtn').hidden=page==='home'}
+function nav(page){state.page=page;closeModal();if(page==='home')renderHome();if(page==='new')renderNovaSaida();if(page==='return')renderReturn();if(page==='stock')renderStock();if(page==='history')renderHistory();if(page==='today')renderToday();$('backBtn').hidden=page==='home'}
 $('backBtn').onclick=()=>nav('home');$('homeBtn').onclick=()=>nav('home');
 function renderNav(){return `<nav class="navbar"><button class="navbtn ${state.page==='home'?'active':''}" onclick="nav('home')"><span class="navicon">⌂</span>Início</button><button class="navbtn ${state.page==='new'?'active':''}" onclick="nav('new')"><span class="navicon">📦</span>Nova saída</button><button class="navbtn ${state.page==='return'?'active':''}" onclick="nav('return')"><span class="navicon">↩</span>Devolução</button><button class="navbtn ${state.page==='history'?'active':''}" onclick="nav('history')"><span class="navicon">◷</span>Histórico</button></nav>`}
-function renderHome(){state.page='home';const saidas=state.activities.filter(a=>a.kind==='saida').length;const devolucoes=state.activities.filter(a=>a.kind==='devolucao').length;$('content').innerHTML=`${renderNav()}<section class="dashboard"><div class="metric"><span class="label">📦 Produtos cadastrados</span><div class="value">—</div><div class="hint">itens na base</div></div><div class="metric"><span class="label">📊 Estoque disponível</span><div class="value">—</div><div class="hint">unidades</div></div><div class="metric"><span class="label">📤 Saídas hoje</span><div class="value">${saidas}</div><div class="hint">materiais</div></div></section><section class="section-card"><div class="section-head"><div><h3>🕘 Últimas movimentações</h3><p>Movimentações mais recentes no sistema.</p></div><button class="refresh" onclick="renderHome()">⟳ Atualizar</button></div><div class="activity-list">${renderActivities()}</div></section><div class="bottomnote">Grupo 360 Manutenção • Web App de estoque</div>`}
+function renderHome(){state.page='home';$('content').innerHTML=`
+<section class="home-grid">
+  <button class="navbtn active" onclick="nav('home')"><span class="navicon">🏠</span>Início</button>
+  <button class="navbtn" onclick="nav('new')"><span class="navicon">📦</span>Nova saída</button>
+  <button class="navbtn" onclick="nav('return')"><span class="navicon">↩️</span>Devolução</button>
+  <button class="navbtn" onclick="nav('stock')"><span class="navicon">🔎</span>Consultar estoque</button>
+  <button class="navbtn" onclick="openSheetTab('94981911')"><span class="navicon">📋</span>Inventário</button>
+  <button class="navbtn" onclick="openSheetTab('2133121804')"><span class="navicon">📥</span>Entrada produtos</button>
+  <button class="navbtn" onclick="renderToday()"><span class="navicon">📤</span>Saídas hoje</button>
+  <button class="navbtn" onclick="nav('history')"><span class="navicon">🕘</span>Histórico</button>
+</section>
+<section class="section-card">
+  <div class="section-head">
+    <div><h3>🕘 Últimas movimentações</h3><p>Movimentações mais recentes no sistema.</p></div>
+    <button class="refresh" onclick="renderHome()">⟳ Atualizar</button>
+  </div>
+  <div class="activity-list">${renderActivities()}</div>
+</section>
+<div class="bottomnote">Grupo 360 Manutenção • Web App de estoque</div>`}
 function renderActivities(){if(!state.activities.length)return '<div class="empty">Nenhuma movimentação registrada neste celular.</div>';return state.activities.slice(0,8).map(a=>{const dev=a.kind==='devolucao';const title=esc(a.title||'Movimentação');const detail=esc(a.detail||'');return `<div class="activity"><div class="act-icon">${dev?'↩️':'⚙️'}</div><div class="act-main"><b>${title}</b><small>${detail}<br>${esc(a.when||'')}</small></div><span class="pill ${dev?'devolucao':'saida'}">${dev?'↩ Devolução':'↑ Saída'}</span></div>`}).join('')}
 function saveActivity(a){state.activities.unshift(a);state.activities=state.activities.slice(0,30);localStorage.setItem('estoque360_activities',JSON.stringify(state.activities))}
 function loadActivities(){try{return JSON.parse(localStorage.getItem('estoque360_activities')||'[]')}catch(e){return []}}
@@ -598,9 +639,14 @@ async function findOrder(){const type=$('returnType').value,number=$('returnNumb
 function renderReturnResult(){const r=state.order;$('returnResult').innerHTML=`<section class="panel"><div class="order-found">✓ ${esc(r.label)} encontrada<br><small>Recebedor: ${esc(r.receiver||'Não informado')}</small></div><div class="items">${r.items.map((p,i)=>`<div class="order-item"><div class="row"><div><b>${esc(p.description)}</b><br><small>${esc(p.code)} • Retirado: ${p.withdrawn} • Já devolvido: ${p.returned} • Disponível: ${p.available}</small></div><input class="returnqty" type="number" min="0" max="${p.available}" step="any" value="0" onchange="state.returnItems[${i}].qty=Number(this.value)"></div></div>`).join('')}</div><button class="primary greenbtn" style="margin-top:12px" onclick="confirmReturn()">✓ CONFIRMAR DEVOLUÇÃO</button></section>`}
 function confirmReturn(){const items=state.returnItems.filter(x=>Number(x.qty)>0).map(x=>({code:x.code,qty:Number(x.qty)}));if(!items.length)return toast('Informe pelo menos uma quantidade para devolver.');if(state.returnItems.some(x=>Number(x.qty)>Number(x.available)))return toast('A quantidade devolvida não pode ser maior que o disponível.');openModal(`<h3>Confirmar devolução</h3><div class="summary">${items.length} material(is) voltarão ao estoque.</div><div class="modalactions"><button class="primary greenbtn" onclick="doReturn()">CONFIRMAR DEVOLUÇÃO</button><button class="secondary" onclick="closeModal()">CANCELAR</button></div>`)}
 async function doReturn(){closeModal();toast('Registrando devolução...');const tx='DEV-'+Date.now()+'-'+Math.random().toString(36).slice(2,7).toUpperCase();const items=state.returnItems.filter(x=>x.qty>0).map(x=>({code:x.code,qty:Number(x.qty)}));try{const r=await post({action:'devolucao',tx,type:state.order.type,number:state.order.number,items});saveActivity({kind:'devolucao',title:`${state.order.type==='os'?'OS':'Tarefa'} ${state.order.number}`,detail:`${items.length} material(is) devolvido(s) • ${state.order.receiver||'Recebedor não informado'}`,when:nowLabel()});openModal(`<h3>✓ Devolução realizada</h3><div class="status">${esc(r.message||'Materiais devolvidos ao estoque.')}</div><button class="primary" onclick="closeModal();nav('home')">VOLTAR AO INÍCIO</button>`)}catch(e){openModal(`<h3>Não foi possível concluir</h3><div class="status err">${esc(e.message)}</div><button class="secondary" onclick="closeModal()">FECHAR</button>`)}}
-function renderStock(){$('content').innerHTML=`${renderNav()}<h2 class="page-title">Consultar estoque</h2><section class="panel"><div class="searchbox"><input id="stockSearch" class="input" placeholder="Buscar material, código, marca ou família" oninput="searchStock(this.value)"><div id="stockSug" class="suggestions" style="display:none"></div></div></section><section id="stockList" class="panel"><div class="empty">Digite pelo menos 2 caracteres para consultar.</div></section>`}
+function renderStock(){$('content').innerHTML=`${renderNav()}<section class="stock-page"><div class="stock-head"><div><h2>🔎 Materiais em estoque</h2><span id="stockCount">Pesquise por material, código, marca ou fabricante.</span></div></div><section class="panel stock-search-panel"><div class="searchbox"><input id="stockSearch" class="input stock-search" placeholder="🔎 Procurar material, código, marca ou fabricante..." oninput="searchStock(this.value)"><div id="stockSug" class="suggestions" style="display:none"></div></div></section><section id="stockList" class="stock-table-wrap"><div class="stock-empty">🔎 Digite pelo menos 2 caracteres para consultar o estoque.</div></section></section>`}
 let stockTimer;let stockRequestId=0;
-async function searchStock(q){clearTimeout(stockTimer);const box=$('stockSug'),list=$('stockList'),term=q.trim();if(!term){stockRequestId++;box.style.display='none';list.innerHTML='<div class="empty">Digite pelo menos 2 caracteres para consultar.</div>';return}if(term.length<2){box.style.display='none';return}const requestId=++stockRequestId;stockTimer=setTimeout(async()=>{try{const r=await jsonp({action:'products',q:term});if(requestId!==stockRequestId)return;if(!r.ok)throw new Error(r.error);const products=Array.isArray(r.products)?r.products:[];list.innerHTML=products.length?products.map(p=>`<div class="order-item" style="margin-bottom:8px"><div class="row"><div><b>${esc(p.description)}</b><br><small>${esc(p.code)} • ${esc(p.brand||'')}</small></div><b>${esc(p.stock)} ${esc(p.unit)}</b></div></div>`).join(''):'<div class="empty">Nenhum material encontrado.</div>'}catch(e){if(requestId!==stockRequestId)return;toast(e.message)}},250)}
+async function searchStock(q){clearTimeout(stockTimer);const list=$('stockList'),count=$('stockCount'),term=q.trim();if(!term){stockRequestId++;list.innerHTML='<div class="stock-empty">🔎 Digite pelo menos 2 caracteres para consultar o estoque.</div>';count.textContent='Pesquise por material, código, marca ou fabricante.';return}if(term.length<2){count.textContent='Digite mais um caractere para pesquisar.';return}const requestId=++stockRequestId;stockTimer=setTimeout(async()=>{try{const r=await jsonp({action:'products',q:term});if(requestId!==stockRequestId)return;if(!r.ok)throw new Error(r.error);const products=Array.isArray(r.products)?r.products:[];count.textContent=`${products.length} material(is) encontrado(s)`;list.innerHTML=products.length?`<div class="stock-table"><div class="stock-row stock-header"><div>Código</div><div>Material</div><div>Marca</div><div>Estoque</div></div>${products.map(p=>{const n=Number(p.stock)||0;const status=n<=0?'sem':(n<=3?'baixo':'ok');const statusText=status==='sem'?'SEM ESTOQUE':status==='baixo'?'ESTOQUE BAIXO':'DISPONÍVEL';const icon=status==='ok'?'🟢':status==='baixo'?'🟠':'🔴';return `<div class="stock-row"><div class="stock-code">${esc(p.code)}</div><div class="stock-material"><b>${esc(p.description)}</b><small>${p.brand?`Fab.: ${esc(p.brand)}`:''}</small></div><div class="stock-brand">${esc(p.brand||'—')}</div><div class="stock-balance"><strong>${esc(p.stock)}</strong><small>${esc(p.unit||'UN')}</small><span class="stock-status ${status}">${icon} ${statusText}</span></div></div>`}).join('')}</div>`:'<div class="stock-empty">❌ Nenhum material encontrado.</div>'}catch(e){if(requestId!==stockRequestId)return;toast(e.message)}},250)}
+function renderToday(){
+  const today=new Date().toLocaleDateString('pt-BR');
+  const saidas=state.activities.filter(a=>a.kind==='saida' && String(a.when||'').startsWith(today));
+  $('content').innerHTML=`${renderNav()}<h2 class="page-title">Saídas hoje</h2><section class="panel"><div class="summary">Saídas registradas neste aparelho em <b>${esc(today)}</b>.</div></section><section class="section-card" style="margin-top:0"><div class="section-head"><div><h3>📤 Saídas</h3><p>${saidas.length} registro(s) neste aparelho.</p></div><button class="refresh" onclick="renderToday()">⟳ Atualizar</button></div><div class="activity-list">${saidas.length?saidas.map(a=>{const title=esc(a.title||'Saída');const detail=esc(a.detail||'');return `<div class="activity"><div class="act-icon">📤</div><div class="act-main"><b>${title}</b><small>${detail}<br>${esc(a.when||'')}</small></div><span class="pill saida">↑ Saída</span></div>`}).join(''):'<div class="empty">Nenhuma saída registrada neste aparelho hoje.</div>'}</div></section>`
+}
 function renderHistory(){const all=state.activities.slice();$('content').innerHTML=`${renderNav()}<h2 class="page-title">Histórico</h2><section class="panel"><div class="summary">Nesta primeira versão, o histórico mostrado aqui é o histórico de movimentações registradas por este celular. O histórico completo da planilha poderá ser ligado a uma consulta própria da API na próxima etapa.</div></section><section class="section-card" style="margin-top:0"><div class="section-head"><div><h3>Movimentações</h3><p>${all.length} registro(s) neste aparelho.</p></div><button class="refresh" onclick="renderHistory()">Atualizar</button></div><div class="activity-list">${renderActivities()}</div></section>`}
 function openModal(html){$('modalBox').innerHTML=html;$('modal').style.display='flex'}function closeModal(){$('modal').style.display='none'}$('modal').onclick=e=>{if(e.target===$('modal'))closeModal()}
 renderHome();

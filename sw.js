@@ -1,4 +1,4 @@
-const CACHE_NAME = 'estoque-360-v7';
+const CACHE_NAME = 'estoque-360-v9';
 const CORE = [
   './',
   './index.html',
@@ -27,7 +27,6 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
-
   event.respondWith(
     fetch(event.request)
       .then(response => {
@@ -35,10 +34,6 @@ self.addEventListener('fetch', event => {
         caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
         return response;
       })
-      .catch(() =>
-        caches.match(event.request).then(
-          cached => cached || caches.match('./index.html')
-        )
-      )
+      .catch(() => caches.match(event.request).then(cached => cached || caches.match('./index.html')))
   );
 });
