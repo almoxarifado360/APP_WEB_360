@@ -1,14 +1,18 @@
 {
-  "name": "Controle de Estoque 360",
-  "short_name": "Estoque 360",
+  "id": "./estoque-360",
+  "name": "ESTOQUE 360",
+  "short_name": "ESTOQUE 360",
   "description": "Aplicativo de controle de estoque do Grupo 360 Manutenção.",
   "lang": "pt-BR",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "display_override": [
+    "standalone"
+  ],
   "orientation": "portrait",
-  "background_color": "#f3f7fb",
-  "theme_color": "#0867c9",
+  "background_color": "#edf4fb",
+  "theme_color": "#123f7b",
   "icons": [
     {
       "src": "./icon-192.png",
