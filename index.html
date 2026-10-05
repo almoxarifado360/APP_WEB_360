@@ -592,7 +592,7 @@ const SHEET_URL='https://docs.google.com/spreadsheets/d/1XNNRj4cvv34yUITVWSpGmEg
 function openSheetTab(gid){window.open(SHEET_URL+'?gid='+encodeURIComponent(gid)+'#gid='+encodeURIComponent(gid),'_blank','noopener');}
 
 const OBSERVACOES=['Para tarefa externa','Para uso da oficina','Para enrolamento de motor','Para uso em OS','Para uso da automação','Para tarefa interna','Para vendas','Para uso na peritagem'];
-const state={page:'home',items:[],entryItems:[],order:null,returnItems:[],destination:'os',activities:loadActivities()};
+const state={page:'home',items:[],entryItems:[],order:null,returnItems:[],destination:'os',activities:[]};
 const $=id=>document.getElementById(id);
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function toast(msg){$('toast').textContent=msg;$('toast').style.display='block';clearTimeout(window._toast);window._toast=setTimeout(()=>$('toast').style.display='none',3200)}
@@ -622,8 +622,8 @@ function renderHome(){state.page='home';$('content').innerHTML=`
 </section>
 <div class="bottomnote">Grupo 360 Manutenção • Web App de estoque</div>`}
 function renderActivities(){if(!state.activities.length)return '<div class="empty">Nenhuma movimentação encontrada no sistema.</div>';return state.activities.slice(0,8).map(a=>{const dev=a.kind==='devolucao';const ent=a.kind==='entrada';const title=esc(a.title||'Movimentação');const detail=esc(a.detail||'');return `<div class="activity"><div class="act-icon">${dev?'↩️':ent?'📥':'⚙️'}</div><div class="act-main"><b>${title}</b><small>${detail}<br>${esc(a.when||'')}</small></div><span class="pill ${dev?'devolucao':ent?'entrada':'saida'}">${dev?'↩ Devolução':ent?'↓ Entrada':'↑ Saída'}</span></div>`}).join('')}
-function saveActivity(a){state.activities.unshift(a);state.activities=state.activities.slice(0,30);localStorage.setItem('estoque360_activities',JSON.stringify(state.activities))}
-function loadActivities(){try{return JSON.parse(localStorage.getItem('estoque360_activities')||'[]')}catch(e){return []}}
+function saveActivity(a){refreshRecent()}
+function loadActivities(){return []}
 function nowLabel(){return new Date().toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}
 function setDestination(type){state.destination=type;const os=$('destOS'),task=$('destTask');if(os){os.classList.toggle('active',type==='os');task.classList.toggle('active',type==='tarefa')}const lab=$('orderLabel'),inp=$('orderNumber');if(lab)lab.textContent=type==='os'?'Referência da OS':'Referência da tarefa';if(inp)inp.placeholder=type==='os'?'Ex.: 4505 ou BOMBA-01':'Ex.: TAREFA-EXT-23 ou BOMBA-01'}
 function renderNovaSaida(){state.items=[];$('content').innerHTML=`<h2 class="page-title">Nova saída</h2><section class="panel"><div class="field"><label>Quem pediu / vai receber o material</label><input id="receiver" class="input" placeholder="Nome do colaborador"></div><div class="field"><label>Para onde foi</label><div class="choice-grid"><button id="destOS" class="choice active" onclick="setDestination('os')">📋 OS<small>Ordem de Serviço</small></button><button id="destTask" class="choice" onclick="setDestination('tarefa')">🔧 Tarefa<small>Ordem de Tarefa</small></button></div></div><div class="field"><label id="orderLabel">Referência da OS</label><input id="orderNumber" class="input" type="text" maxlength="80" placeholder="Ex.: 4505 ou MANUTENÇÃO BOMBA 01"></div></section><section class="panel"><div class="limit">Materiais (máx. 15 por OS / 20 por tarefa)</div><div class="searchbox"><input id="materialSearch" class="input" placeholder="Digite o material, código ou marca" oninput="searchMaterial(this.value)"><div id="suggestions" class="suggestions" style="display:none"></div></div><div id="items" class="items" style="margin-top:10px"></div></section><section class="panel"><div class="summary" id="summary">Adicione os materiais que saíram do estoque.</div><button class="primary" style="margin-top:10px" onclick="confirmBaixa()">✓ REGISTRAR SAÍDA</button></section>`}
@@ -765,6 +765,7 @@ function activityFromMovement(m){
     movement:m
   };
 }
+// V17: movimentações vêm exclusivamente da API/Google Sheets; localStorage não é fonte de histórico.
 async function refreshRecent(){
   try{
     const r=await jsonp({action:'recent',limit:12});
