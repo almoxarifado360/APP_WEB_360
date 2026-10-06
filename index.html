@@ -30,6 +30,12 @@ html,body{
   background:var(--bg);
   font-family:Arial,Helvetica,sans-serif;
   color:var(--text);
+  overflow-x:hidden;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+html{
+  touch-action:pan-y;
 }
 button,input,select{font:inherit}
 button{cursor:pointer}
@@ -388,8 +394,10 @@ button{cursor:pointer}
   box-shadow:0 10px 24px rgba(21,50,75,.16);
   z-index:30;
   overflow:hidden;
-  max-height:330px;
+  max-height:300px;
   overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
 }
 .suggestion{
   width:100%;
@@ -746,6 +754,15 @@ const v14Style=document.createElement('style');v14Style.textContent=`
 .status-cancelada{opacity:.6}
 .status-editada{opacity:.75}
 `;document.head.appendChild(v14Style);
+const v18Style=document.createElement('style');
+v18Style.textContent=`
+@media(max-width:600px){
+  .suggestions{max-height:240px}
+  .item{scroll-margin-top:12px}
+  #content{padding-bottom:24px}
+}
+`;
+document.head.appendChild(v18Style);
 /* ===== ESTOQUE 360 V14 — MOVIMENTAÇÕES CLICÁVEIS / EDITAR / DESFAZER ===== */
 function formatServerDate(v){
   if(!v)return '';
@@ -839,7 +856,7 @@ function showMovementModal(m){
       <div class="mvline"><b>Materiais</b>${items||'<div>Sem itens.</div>'}</div>
     </div>
     ${canEdit?`<div class="movement-actions">
-      <button class="primary" onclick="startEditMovement(${JSON.stringify(m).replace(/</g,'\\u003c')})">✏️ EDITAR</button>
+      <button class="primary" onclick="startEditMovement('${esc(m.tx)}')">✏️ EDITAR</button>
       <button class="secondary" onclick="confirmCancelMovement('${esc(m.tx)}')">↩️ DESFAZER</button>
       <button class="secondary" style="grid-column:1/-1" onclick="confirmCancelMovement('${esc(m.tx)}',true)">🗑️ EXCLUIR MOVIMENTAÇÃO</button>
     </div>`:`<div class="status">Esta movimentação já está ${esc(status.toLowerCase())}.</div>`}
@@ -965,6 +982,17 @@ function renderActivitiesFrom(items){return items.map(a=>{const cls=a.status==='
 </script>
 
 renderHome();
+</script>
+<script>
+// V18 — ao tocar fora dos resultados, fecha a lista para liberar a rolagem da tela.
+document.addEventListener('pointerdown', function(e){
+  const box=document.getElementById('suggestions');
+  const search=document.getElementById('materialSearch');
+  if(!box || box.style.display==='none') return;
+  if(search && (e.target===search || search.contains(e.target))) return;
+  if(box.contains(e.target)) return;
+  box.style.display='none';
+});
 </script>
 <script>
 if ('serviceWorker' in navigator) {
