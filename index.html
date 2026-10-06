@@ -715,10 +715,16 @@ function renderEntrada(){
     <div id="entryItems" class="items" style="margin-top:10px"></div>
   </section>
   <section class="panel">
-    <div class="field"><label>Observação</label><input id="entryObservation" class="input" placeholder="Ex.: reposição de estoque"></div>
+    <div class="field"><label>Observação</label><input id="entryObservation" class="input" placeholder="Ex.: reposição para automação, reposição de estoque..."></div>
     <div class="summary" id="entrySummary">Adicione os materiais recebidos.</div>
     <button class="primary greenbtn" style="margin-top:10px" onclick="confirmEntrada()">✓ REGISTRAR ENTRADA</button>
+  </section>
+  <section class="section-card" style="margin-top:12px">
+    <div class="section-head"><div><h3>📥 Histórico de entradas</h3><p>Entradas registradas no ESTOQUE 360.</p></div><button class="refresh" onclick="carregarHistoricoEntradas()">⟳ Atualizar</button></div>
+    <div class="searchbox" style="margin-bottom:10px"><input id="entryHistorySearch" class="input" placeholder="Pesquisar por NF ou fornecedor" oninput="carregarHistoricoEntradasDebounced(this.value)"></div>
+    <div id="entryHistoryList" class="activity-list"><div class="empty">Carregando...</div></div>
   </section>`;
+  carregarHistoricoEntradas();
 }
 let entrySearchTimer; let entryRequestId=0;
 async function searchEntrada(q){
@@ -739,12 +745,12 @@ async function searchEntrada(q){
 }
 function addEntryItem(p){
   if(state.entryItems.some(x=>x.code===p.code)){toast('Esse material já foi adicionado.');return}
-  state.entryItems.push({...p,qty:1,note:''}); renderEntryItems(); $('entrySearch').value=''; $('entrySuggestions').style.display='none';
+  state.entryItems.push({...p,qty:1}); renderEntryItems(); $('entrySearch').value=''; $('entrySuggestions').style.display='none';
 }
 function renderEntryItems(){
   const el=$('entryItems');
   if(!state.entryItems.length){el.innerHTML='<div class="empty">Nenhum material adicionado.</div>';return}
-  el.innerHTML=state.entryItems.map((p,i)=>`<div class="item"><div class="itemtop"><span class="num">${i+1}</span><div class="desc">${esc(p.description)}</div><button class="remove" onclick="removeEntryItem(${i})">🗑</button></div><div class="itemmeta">${esc(p.code)} • Estoque atual: ${esc(p.stock)} ${esc(p.unit)}</div><div class="itembottom"><input class="qty" type="number" min="0.001" step="any" value="${esc(p.qty)}" onchange="state.entryItems[${i}].qty=Number(this.value);renderEntrySummary()"><select class="input" style="height:42px" onchange="state.entryItems[${i}].note=this.value"><option value="">Observação do item</option>${OBSERVACOES.map(o=>`<option value="${esc(o)}" ${p.note===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div></div>`).join('');
+  el.innerHTML=state.entryItems.map((p,i)=>`<div class="item"><div class="itemtop"><span class="num">${i+1}</span><div class="desc">${esc(p.description)}</div><button class="remove" onclick="removeEntryItem(${i})">🗑</button></div><div class="itemmeta">${esc(p.code)} • Estoque atual: ${esc(p.stock)} ${esc(p.unit)}</div><div class="itembottom"><input class="qty" type="number" min="0.001" step="any" value="${esc(p.qty)}" onchange="state.entryItems[${i}].qty=Number(this.value);renderEntrySummary()"></div></div>`).join('');
   renderEntrySummary();
 }
 function removeEntryItem(i){state.entryItems.splice(i,1);renderEntryItems()}
@@ -762,10 +768,40 @@ async function doEntrada(){
   const supplier=$('entrySupplier').value.trim(), nf=$('entryNF').value.trim(), observation=$('entryObservation').value.trim();
   const tx='ENT-'+Date.now()+'-'+Math.random().toString(36).slice(2,7).toUpperCase();
   try{
-    const r=await post({action:'entrada',tx,supplier,nf,observation,items:state.entryItems.map(x=>({code:x.code,qty:Number(x.qty),unit:x.unit,note:x.note}))});
+    const r=await post({action:'entrada',tx,supplier,nf,observation,items:state.entryItems.map(x=>({code:x.code,qty:Number(x.qty),unit:x.unit}))});
     saveActivity({kind:'entrada',title:`NF-e ${nf}`,detail:`${state.entryItems.length} material(is) • ${supplier}`,when:nowLabel()});
     openModal(`<h3>✓ Entrada realizada</h3><div class="status">${esc(r.message||'Entrada registrada e estoque atualizado.')}</div><button class="primary" onclick="closeModal();nav('home')">VOLTAR AO INÍCIO</button>`);
   }catch(e){openModal(`<h3>Não foi possível concluir</h3><div class="status err">${esc(e.message)}</div><button class="secondary" onclick="closeModal()">FECHAR</button>`)}
+}
+
+let entryHistoryTimer;
+async function carregarHistoricoEntradasDebounced(q){
+  clearTimeout(entryHistoryTimer);
+  entryHistoryTimer=setTimeout(()=>carregarHistoricoEntradas(q),250);
+}
+async function carregarHistoricoEntradas(q){
+  const list=$('entryHistoryList');
+  if(!list)return;
+  list.innerHTML='<div class="empty">Carregando histórico...</div>';
+  try{
+    const r=await jsonp({action:'entryhistory',limit:100,q:String(q||'').trim()});
+    if(!r.ok)throw new Error(r.error||'Não foi possível carregar o histórico de entradas.');
+    const entries=Array.isArray(r.entries)?r.entries:[];
+    if(!entries.length){list.innerHTML='<div class="empty">Nenhuma entrada encontrada.</div>';return;}
+    list.innerHTML=entries.map(e=>{
+      const status=String(e.status||'ATIVA').toUpperCase();
+      const cls=status==='CANCELADA'?'status-cancelada':status==='EDITADA'?'status-editada':'';
+      const itens=e.items||[];
+      const resumo=itens.length===1
+        ? `${esc(itens[0].description)} • ${esc(itens[0].qty)} ${esc(itens[0].unit||'UN')}`
+        : `${itens.length} materiais • ${esc(e.totalQty)} unidades`;
+      return `<div class="activity ${cls}" style="margin-bottom:8px">
+        <div class="act-icon">📥</div>
+        <div class="act-main"><b>NF-e ${esc(e.nf||'Sem NF')}</b><small>${esc(e.supplier||'Fornecedor não informado')}<br>${resumo}<br>${esc(formatServerDate(e.date))}${e.observation?`<br>Obs.: ${esc(e.observation)}`:''}</small></div>
+        <span class="pill entrada">ENTRADA</span>
+      </div>`;
+    }).join('');
+  }catch(e){list.innerHTML=`<div class="status err">${esc(e.message)}</div>`}
 }
 
 function renderReturn(){$('content').innerHTML=`<h2 class="page-title">Devolução</h2><section class="panel"><div class="field"><label>Tipo</label><select id="returnType" class="select"><option value="os">OS</option><option value="tarefa">Tarefa</option></select></div><div class="field"><label>Referência da OS ou Tarefa</label><input id="returnNumber" class="input" type="text" maxlength="80" placeholder="Ex.: 4505 ou MANUTENÇÃO BOMBA 01"></div><button class="primary orangebtn" onclick="findOrder()">🔎 LOCALIZAR MATERIAIS</button></section><section id="returnResult"></section>`}
