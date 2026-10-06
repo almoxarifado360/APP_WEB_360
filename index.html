@@ -485,33 +485,6 @@ button{cursor:pointer}
   padding:9px 11px;font-weight:700
 }
 .history-tab.active{background:#eaf3ff;border-color:#1c70dc;color:#125fae}
-
-/* ===== SELEÇÃO DE COLABORADOR ===== */
-.collab-search{position:relative}
-.collab-suggestions{
-  position:absolute;
-  left:0;right:0;top:60px;
-  background:#fff;
-  border:1px solid #d5e3ee;
-  border-radius:14px;
-  box-shadow:0 10px 24px rgba(21,50,75,.16);
-  z-index:35;
-  overflow:hidden;
-  max-height:280px;
-  overflow-y:auto;
-  -webkit-overflow-scrolling:touch;
-  touch-action:pan-y;
-}
-.collab-suggestion{
-  width:100%;border:0;background:#fff;text-align:left;
-  padding:12px 14px;border-bottom:1px solid #eef3f7;
-}
-.collab-suggestion:last-child{border-bottom:0}
-.collab-suggestion b{display:block;font-size:14px;color:#142d47}
-.collab-suggestion small{display:block;margin-top:3px;color:var(--muted);font-size:11px}
-.collab-suggestion:hover,.collab-suggestion:focus{background:#edf5ff}
-.collab-selected{margin-top:7px;color:#167a5b;font-size:12px;font-weight:700;display:none}
-
 .toast{
   position:fixed;left:50%;bottom:15px;
   transform:translateX(-50%);
@@ -627,7 +600,7 @@ const SHEET_URL='https://docs.google.com/spreadsheets/d/1XNNRj4cvv34yUITVWSpGmEg
 function openSheetTab(gid){window.open(SHEET_URL+'?gid='+encodeURIComponent(gid)+'#gid='+encodeURIComponent(gid),'_blank','noopener');}
 
 const OBSERVACOES=['Para tarefa externa','Para uso da oficina','Para enrolamento de motor','Para uso em OS','Para uso da automação','Para tarefa interna','Para vendas','Para uso na peritagem'];
-const state={page:'home',items:[],entryItems:[],order:null,returnItems:[],destination:'os',activities:[],collaborators:[],collaboratorsLoaded:false};
+const state={page:'home',items:[],entryItems:[],order:null,returnItems:[],destination:'os',activities:[]};
 const $=id=>document.getElementById(id);
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function toast(msg){$('toast').textContent=msg;$('toast').style.display='block';clearTimeout(window._toast);window._toast=setTimeout(()=>$('toast').style.display='none',3200)}
@@ -661,56 +634,66 @@ function saveActivity(a){refreshRecent()}
 function loadActivities(){return []}
 function nowLabel(){return new Date().toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}
 function setDestination(type){state.destination=type;const os=$('destOS'),task=$('destTask');if(os){os.classList.toggle('active',type==='os');task.classList.toggle('active',type==='tarefa')}const lab=$('orderLabel'),inp=$('orderNumber');if(lab)lab.textContent=type==='os'?'Referência da OS':'Referência da tarefa';if(inp)inp.placeholder=type==='os'?'Ex.: 4505 ou BOMBA-01':'Ex.: TAREFA-EXT-23 ou BOMBA-01'}
-function renderNovaSaida(){
-  state.items=[];
-  $('content').innerHTML=`<h2 class="page-title">Nova saída</h2>
-  <section class="panel">
-    <div class="field">
-      <label>Quem pediu / vai receber o material</label>
-      <div class="searchbox collab-search">
-        <input id="receiver" class="input" autocomplete="off" placeholder="Digite ou selecione o nome do colaborador" onfocus="showCollaborators(this.value)" oninput="showCollaborators(this.value)">
-        <div id="collaboratorSuggestions" class="collab-suggestions" style="display:none"></div>
-      </div>
-      <div id="collaboratorSelected" class="collab-selected">✓ Colaborador selecionado</div>
-    </div>
-    <div class="field"><label>Para onde foi</label><div class="choice-grid"><button id="destOS" class="choice active" onclick="setDestination('os')">📋 OS<small>Ordem de Serviço</small></button><button id="destTask" class="choice" onclick="setDestination('tarefa')">🔧 Tarefa<small>Ordem de Tarefa</small></button></div></div>
-    <div class="field"><label id="orderLabel">Referência da OS</label><input id="orderNumber" class="input" type="text" maxlength="80" placeholder="Ex.: 4505 ou MANUTENÇÃO BOMBA 01"></div>
-  </section>
-  <section class="panel"><div class="limit">Materiais (máx. 15 por OS / 20 por tarefa)</div><div class="searchbox"><input id="materialSearch" class="input" placeholder="Digite o material, código ou marca" oninput="searchMaterial(this.value)"><div id="suggestions" class="suggestions" style="display:none"></div></div><div id="items" class="items" style="margin-top:10px"></div></section>
-  <section class="panel"><div class="summary" id="summary">Adicione os materiais que saíram do estoque.</div><button class="primary" style="margin-top:10px" onclick="confirmBaixa()">✓ REGISTRAR SAÍDA</button></section>`;
-  loadCollaborators();
-}
-let collaboratorTimer;
-let collaboratorRequestId=0;
-async function loadCollaborators(){
-  if(state.collaboratorsLoaded && state.collaborators.length) return;
+let colaboradoresRequestId=0;
+
+async function carregarColaboradoresSaida(){
+  const select=$('receiver');
+  const status=$('receiverStatus');
+  if(!select)return;
+
+  const requestId=++colaboradoresRequestId;
+  select.innerHTML='<option value="">Carregando colaboradores...</option>';
+  if(status)status.textContent='';
+
   try{
-    const r=await jsonp({action:'collaborators'});
-    if(!r.ok)throw new Error(r.error||'Não foi possível carregar os colaboradores.');
-    state.collaborators=Array.isArray(r.collaborators)?r.collaborators:[];
-    state.collaboratorsLoaded=true;
-  }catch(e){toast('Não foi possível carregar a lista de colaboradores. Você ainda pode digitar o nome.');}
-}
-function showCollaborators(q){
-  const box=$('collaboratorSuggestions');
-  if(!box)return;
-  clearTimeout(collaboratorTimer);
-  const term=String(q||'').trim();
-  if(!state.collaborators.length){loadCollaborators();box.style.display='none';return}
-  const nq=normClient(term);
-  const list=state.collaborators.filter(c=>!nq||normClient(c.name).includes(nq)).slice(0,30);
-  if(!list.length){box.innerHTML='<div class="collab-suggestion"><small>Nenhum colaborador encontrado.</small></div>';box.style.display='block';return}
-  box.innerHTML=list.map(c=>`<button type="button" class="collab-suggestion" onclick="selectCollaborator('${esc(c.name)}')"><b>${esc(c.name)}</b><small>${esc(c.company||'')} ${c.code?`• ${esc(c.code)}`:''}</small></button>`).join('');
-  box.style.display='block';
-}
-function normClient(v){return String(v||'').trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
-function selectCollaborator(name){
-  const input=$('receiver'),box=$('collaboratorSuggestions'),selected=$('collaboratorSelected');
-  if(input)input.value=name;
-  if(box)box.style.display='none';
-  if(selected)selected.style.display='block';
+    const r=await jsonp({action:'colaboradores'});
+    if(requestId!==colaboradoresRequestId)return;
+    if(!r || !r.ok)throw new Error((r&&r.error)||'Não foi possível carregar a lista de colaboradores.');
+
+    const lista=Array.isArray(r.colaboradores)?r.colaboradores:[];
+    select.innerHTML='<option value="">Selecione o colaborador</option>';
+
+    lista.forEach(c=>{
+      const opt=document.createElement('option');
+      opt.value=String(c.nome||'').trim();
+      opt.textContent=String(c.nome||'').trim();
+      if(c.empresa)opt.dataset.empresa=String(c.empresa);
+      if(c.funcao)opt.dataset.funcao=String(c.funcao);
+      select.appendChild(opt);
+    });
+
+    if(!lista.length){
+      select.innerHTML='<option value="">Nenhum colaborador ativo cadastrado</option>';
+      throw new Error('Nenhum colaborador ativo foi encontrado na aba COLABORADORES.');
+    }
+  }catch(e){
+    if(requestId!==colaboradoresRequestId)return;
+    select.innerHTML='<option value="">Não foi possível carregar a lista de colaboradores</option>';
+    if(status)status.textContent='⚠️ '+String(e.message||e);
+    toast(String(e.message||e));
+  }
 }
 
+function marcarColaboradorSelecionado(){
+  const select=$('receiver'),status=$('receiverStatus');
+  if(!select)return;
+  const opt=select.options[select.selectedIndex];
+  if(status){
+    status.textContent=select.value
+      ? '✓ Colaborador selecionado'
+      : '';
+  }
+}
+
+function renderNovaSaida(){state.items=[];$('content').innerHTML=`<h2 class="page-title">Nova saída</h2><section class="panel"><div class="field">
+<label>Quem pediu / vai receber o material</label>
+<select id="receiver" class="select" onchange="marcarColaboradorSelecionado()">
+  <option value="">Carregando colaboradores...</option>
+</select>
+<div id="receiverStatus" style="margin-top:6px;font-size:12px;color:#16805d"></div>
+</div><div class="field"><label>Para onde foi</label><div class="choice-grid"><button id="destOS" class="choice active" onclick="setDestination('os')">📋 OS<small>Ordem de Serviço</small></button><button id="destTask" class="choice" onclick="setDestination('tarefa')">🔧 Tarefa<small>Ordem de Tarefa</small></button></div></div><div class="field"><label id="orderLabel">Referência da OS</label><input id="orderNumber" class="input" type="text" maxlength="80" placeholder="Ex.: 4505 ou MANUTENÇÃO BOMBA 01"></div></section><section class="panel"><div class="limit">Materiais (máx. 15 por OS / 20 por tarefa)</div><div class="searchbox"><input id="materialSearch" class="input" placeholder="Digite o material, código ou marca" oninput="searchMaterial(this.value)"><div id="suggestions" class="suggestions" style="display:none"></div></div><div id="items" class="items" style="margin-top:10px"></div></section><section class="panel"><div class="summary" id="summary">Adicione os materiais que saíram do estoque.</div><button class="primary" style="margin-top:10px" onclick="confirmBaixa()">✓ REGISTRAR SAÍDA</button></section>`;
+  carregarColaboradoresSaida();
+}
 let searchTimer;let materialRequestId=0;
 async function searchMaterial(q){clearTimeout(searchTimer);const box=$('suggestions'),term=q.trim();if(!term){materialRequestId++;box.style.display='none';return}if(term.length<2){box.style.display='none';return}const requestId=++materialRequestId;searchTimer=setTimeout(async()=>{try{const r=await jsonp({action:'products',q:term});if(requestId!==materialRequestId)return;if(!r.ok)throw new Error(r.error);const products=Array.isArray(r.products)?r.products:[];box.innerHTML=products.map(p=>`<button class="suggestion" onclick='addItem(${JSON.stringify(p)})'><span><b>${esc(p.code)}</b><small>${esc(p.description)}</small></span><span class="stock">Est.: ${esc(p.stock)}<br>${esc(p.unit)}</span></button>`).join('')||'<div class="suggestion">Nenhum material encontrado.</div>';box.style.display='block'}catch(e){if(requestId!==materialRequestId)return;toast(e.message)}},250)}
 function addItem(p){const max=state.destination==='os'?15:20;if(state.items.length>=max){toast(`Limite de ${max} itens atingido.`);return}if(state.items.some(x=>x.code===p.code)){toast('Esse material já foi adicionado.');return}state.items.push({...p,qty:1,note:''});renderItems();$('materialSearch').value='';$('suggestions').style.display='none'}
@@ -1055,6 +1038,8 @@ function renderToday(){
   jsonp({action:'recent',limit:30}).then(r=>{if(!r.ok)throw new Error(r.error);const today=new Date().toLocaleDateString('pt-BR');const items=(r.movements||[]).map(activityFromMovement).filter(a=>a.kind==='saida'&&a.when.startsWith(today));$('todayActivities').innerHTML=items.length?renderActivitiesFrom(items):'<div class="empty">Nenhuma saída registrada hoje.</div>'}).catch(e=>{$('todayActivities').innerHTML=`<div class="status err">${esc(e.message)}</div>`});
 }
 function renderActivitiesFrom(items){return items.map(a=>{const cls=a.status==='CANCELADA'?'status-cancelada':a.status==='EDITADA'?'status-editada':'';return `<div class="activity clickable ${cls}" role="button" tabindex="0" onclick="openMovement('${esc(a.tx)}')" onkeydown="if(event.key==='Enter'||event.key===' ')openMovement('${esc(a.tx)}')"><div class="act-icon">📤</div><div class="act-main"><b>${esc(a.title)}</b><small>${esc(a.detail)}<br>${esc(a.when)}</small><small style="color:#1c70dc;font-weight:800">Toque para abrir • editar • desfazer</small></div><span class="pill saida">↑ Saída</span><span class="chev">›</span></div>`}).join('')}
+</script>
+<script>
 renderHome();
 </script>
 <script>
@@ -1062,11 +1047,6 @@ renderHome();
 document.addEventListener('pointerdown', function(e){
   const box=document.getElementById('suggestions');
   const search=document.getElementById('materialSearch');
-  const cbox=document.getElementById('collaboratorSuggestions');
-  const csearch=document.getElementById('receiver');
-  if(cbox && cbox.style.display!=='none') {
-    if(!(csearch && (e.target===csearch || csearch.contains(e.target))) && !cbox.contains(e.target)) cbox.style.display='none';
-  }
   if(!box || box.style.display==='none') return;
   if(search && (e.target===search || search.contains(e.target))) return;
   if(box.contains(e.target)) return;
