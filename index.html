@@ -795,10 +795,10 @@ async function carregarHistoricoEntradas(q){
       const resumo=itens.length===1
         ? `${esc(itens[0].description)} • ${esc(itens[0].qty)} ${esc(itens[0].unit||'UN')}`
         : `${itens.length} materiais • ${esc(e.totalQty)} unidades`;
-      return `<div class="activity ${cls}" style="margin-bottom:8px">
+      return `<div class="activity clickable ${cls}" style="margin-bottom:8px" role="button" tabindex="0" onclick="openMovement('${esc(e.tx||'')}')" onkeydown="if(event.key==='Enter'||event.key===' ')openMovement('${esc(e.tx||'')}')">
         <div class="act-icon">📥</div>
-        <div class="act-main"><b>NF-e ${esc(e.nf||'Sem NF')}</b><small>${esc(e.supplier||'Fornecedor não informado')}<br>${resumo}<br>${esc(formatServerDate(e.date))}${e.observation?`<br>Obs.: ${esc(e.observation)}`:''}</small></div>
-        <span class="pill entrada">ENTRADA</span>
+        <div class="act-main"><b>NF-e ${esc(e.nf||'Sem NF')}</b><small>${esc(e.supplier||'Fornecedor não informado')}<br>${resumo}<br>${esc(formatServerDate(e.date))}${e.observation?`<br>Obs.: ${esc(e.observation)}`:''}<br><span style="color:#1c70dc;font-weight:800">Toque para abrir • editar • desfazer</span></small></div>
+        <span class="pill entrada">${status==='CANCELADA'?'CANCELADA':status==='EDITADA'?'EDITADA':'ENTRADA'}</span><span class="chev">›</span>
       </div>`;
     }).join('');
   }catch(e){list.innerHTML=`<div class="status err">${esc(e.message)}</div>`}
@@ -858,6 +858,16 @@ v18Style.textContent=`
 }
 `;
 document.head.appendChild(v18Style);
+
+const v23EntryStyle=document.createElement('style');
+v23EntryStyle.textContent=`
+.entry-history-clickable{cursor:pointer;position:relative}
+.entry-history-clickable:active{transform:scale(.99)}
+.entry-history-clickable:focus{outline:2px solid #2169d5;outline-offset:2px}
+.entry-history-clickable .chev{font-size:22px;color:#8aa0b5;margin-left:4px}
+`;
+document.head.appendChild(v23EntryStyle);
+
 /* ===== ESTOQUE 360 V14 — MOVIMENTAÇÕES CLICÁVEIS / EDITAR / DESFAZER ===== */
 function formatServerDate(v){
   if(!v)return '';
@@ -1028,7 +1038,7 @@ async function searchEditEntryMaterial(q){
   try{const r=await jsonp({action:'products',q:term});if(!r.ok)throw new Error(r.error);box.innerHTML=(r.products||[]).map(p=>`<button class="suggestion" onclick='addEditEntryItem(${JSON.stringify(p)})'><span><b>${esc(p.code)}</b><small>${esc(p.description)}</small></span><span class="stock">Est.: ${esc(p.stock)}<br>${esc(p.unit)}</span></button>`).join('')||'<div class="suggestion">Nenhum material encontrado.</div>';box.style.display='block'}catch(e){toast(e.message)}
 }
 function addEditEntryItem(p){if(state.editItems.some(x=>x.code===p.code)){toast('Esse material já está na entrada.');return}state.editItems.push({...p,qty:1,note:''});renderEditEntryItems();$('editEntrySearch').value='';$('editEntrySuggestions').style.display='none'}
-function renderEditEntryItems(){const el=$('editEntryItems');if(!el)return;if(!state.editItems.length){el.innerHTML='<div class="empty">Nenhum material.</div>';return}el.innerHTML=state.editItems.map((p,i)=>`<div class="item"><div class="itemtop"><span class="num">${i+1}</span><div class="desc">${esc(p.description)}</div><button class="remove" onclick="removeEditItem(${i})">🗑</button></div><div class="itemmeta">${esc(p.code)} • ${esc(p.unit||'UN')}</div><div class="itembottom"><input class="qty" type="number" min="0.001" step="any" value="${esc(p.qty)}" onchange="state.editItems[${i}].qty=Number(this.value)"><select class="input" style="height:42px" onchange="state.editItems[${i}].note=this.value"><option value="">Observação</option>${OBSERVACOES.map(o=>`<option value="${esc(o)}" ${p.note===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div></div>`).join('')}
+function renderEditEntryItems(){const el=$('editEntryItems');if(!el)return;if(!state.editItems.length){el.innerHTML='<div class="empty">Nenhum material.</div>';return}el.innerHTML=state.editItems.map((p,i)=>`<div class="item"><div class="itemtop"><span class="num">${i+1}</span><div class="desc">${esc(p.description)}</div><button class="remove" onclick="removeEditItem(${i})">🗑</button></div><div class="itemmeta">${esc(p.code)} • ${esc(p.unit||'UN')}</div><div class="itembottom"><input class="qty" type="number" min="0.001" step="any" value="${esc(p.qty)}" onchange="state.editItems[${i}].qty=Number(this.value)"></div></div>`).join('')}
 function renderEditDevolucao(m){
   state.page='edit';$('backBtn').hidden=false;
   $('content').innerHTML=`<div class="editbar"><button onclick="editBack()">← Voltar</button><h2 class="page-title" style="margin:0">✏️ Editar devolução</h2></div>
