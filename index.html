@@ -868,27 +868,78 @@ function inventoryParseNumber_(value){
   const n=Number(s); return Number.isFinite(n)?n:null;
 }
 function inventoryExtractPairsFromText_(text){
-  const out=[]; const lines=String(text||'').replace(/\r/g,'').split(/\n+/);
-  lines.forEach(raw=>{
-    const line=String(raw||'').replace(/\u00a0/g,' ').trim(); if(!line)return;
-    const tokens=line.split(/[\t;|]+/).map(x=>x.trim()).filter(Boolean);
+  const out=[];
+  const lines=String(text||'').replace(/\r/g,'').split(/\n+/).map(x=>String(x||'').replace(/\u00a0/g,' ').trim()).filter(Boolean);
+
+  // 1) Primeiro tenta cada linha/linha de tabela. Isso cobre Word, Excel, PDF textual e OCR.
+  lines.forEach((line, lineIndex)=>{
     let found=false;
+    const tokens=line.split(/[\t;|]+/).map(x=>x.trim()).filter(Boolean);
+
     for(let i=0;i<tokens.length;i++){
-      const code=inventoryNormalizeCode_(tokens[i]);
       if(!inventoryLooksLikeCode_(tokens[i]))continue;
+      const code=inventoryNormalizeCode_(tokens[i]);
       const candidates=[];
-      if(i+1<tokens.length)candidates.push(tokens[i+1]);
-      if(i+2<tokens.length)candidates.push(tokens[i+2]);
-      for(const c of candidates){const n=inventoryParseNumber_(c);if(n!==null&&n>=0){out.push({code,count:n});found=true;break}}
+      // Quantidade logo depois do código.
+      for(let j=i+1;j<Math.min(tokens.length,i+4);j++) candidates.push(tokens[j]);
+      // Também aceita quantidade antes do código (algumas planilhas exportam assim).
+      for(let j=Math.max(0,i-3);j<i;j++) candidates.push(tokens[j]);
+      for(const c of candidates){
+        const n=inventoryParseNumber_(c);
+        if(n!==null&&n>=0){out.push({code,count:n});found=true;break}
+      }
       if(found)break;
     }
     if(found)return;
-    const m=line.match(/\b([A-Z]{2,12}\s*\d{2,6})\b\s*(?:[-–—:;|,\t]|\s)+(-?\d+(?:[\.,]\d+)?)/i);
-    if(m){const n=inventoryParseNumber_(m[2]);if(n!==null&&n>=0)out.push({code:inventoryNormalizeCode_(m[1]),count:n});return}
+
+    // Formatos como: ROL001 5 | ROL001 - 5 | ROL001;5
+    const m=line.match(/\b([A-Z]{2,12}\s*\d{2,6})\b.*?(-?\d+(?:[\.,]\d+)?)\s*$/i);
+    if(m){
+      const n=inventoryParseNumber_(m[2]);
+      if(n!==null&&n>=0)out.push({code:inventoryNormalizeCode_(m[1]),count:n});
+    }
+
+    // Formato simples: ROL001 5
     const m2=line.match(/^\s*([A-Z]{2,12}\s*\d{2,6})\s+(-?\d+(?:[\.,]\d+)?)\s*$/i);
-    if(m2){const n=inventoryParseNumber_(m2[2]);if(n!==null&&n>=0)out.push({code:inventoryNormalizeCode_(m2[1]),count:n})}
+    if(m2){
+      const n=inventoryParseNumber_(m2[2]);
+      if(n!==null&&n>=0)out.push({code:inventoryNormalizeCode_(m2[1]),count:n});
+    }
+
+    // Word/Mammoth pode entregar cada célula da tabela em uma linha:
+    // ROL001\n5\nROL002\n8
+    if(inventoryLooksLikeCode_(line)){
+      for(let k=1;k<=4;k++){
+        const next=lines[lineIndex+k];
+        if(next===undefined)break;
+        const n=inventoryParseNumber_(next);
+        if(n!==null&&n>=0){
+          out.push({code:inventoryNormalizeCode_(line),count:n});
+          break;
+        }
+      }
+    }
   });
-  return out;
+
+  // 2) Segunda passada: sequências de tokens. É especialmente útil para DOCX
+  // em que o Mammoth separa as células de uma tabela em linhas independentes.
+  const flat=[];
+  lines.forEach(line=>{
+    line.split(/[\t;|]+/).map(x=>x.trim()).filter(Boolean).forEach(x=>flat.push(x));
+  });
+  for(let i=0;i<flat.length;i++){
+    if(!inventoryLooksLikeCode_(flat[i]))continue;
+    const code=inventoryNormalizeCode_(flat[i]);
+    for(let j=i+1;j<Math.min(flat.length,i+5);j++){
+      const n=inventoryParseNumber_(flat[j]);
+      if(n!==null&&n>=0){out.push({code,count:n});break}
+    }
+  }
+
+  // Remove duplicatas mantendo a primeira ocorrência.
+  const unique=[]; const seen=new Set();
+  out.forEach(x=>{const key=inventoryNormalizeCode_(x.code); if(!seen.has(key)){seen.add(key);unique.push({code:key,count:x.count})}});
+  return unique;
 }
 function inventoryParseExcel_(arrayBuffer){
   if(!window.XLSX)throw new Error('Leitor de Excel não carregou. Atualize a página e tente novamente.');
