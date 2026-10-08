@@ -8,12 +8,6 @@
 <link rel="apple-touch-icon" sizes="192x192" href="./icon-192.png">
 <title>Estoque 360</title>
 
-<!-- Bibliotecas usadas pelo Inventário 360 para leitura de arquivos -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
-
 <style>
 :root{
   --blue:#123f7b;
@@ -586,8 +580,6 @@ button{cursor:pointer}
 .inventory-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 .inventory-item{border:1px solid var(--line);border-radius:16px;padding:13px;margin-bottom:10px;background:#fff;box-shadow:0 2px 8px rgba(25,67,105,.05)}
 .inventory-item .toprow{display:flex;align-items:flex-start;gap:10px}.inventory-item .num{width:30px;height:30px;border-radius:50%;background:#0b79d0;color:#fff;display:grid;place-items:center;font-weight:800;flex:0 0 30px}.inventory-item .desc{flex:1;font-weight:800}.inventory-item .meta{font-size:12px;color:var(--muted);margin-top:4px}.inventory-item .balances{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:10px}.inventory-item .balance{background:#f3f7fb;border-radius:10px;padding:8px;font-size:11px;color:var(--muted)}.inventory-item .balance b{display:block;font-size:16px;color:var(--text);margin-top:3px}.inventory-item .difference{border-radius:10px;padding:8px;font-size:11px}.inventory-item .difference.plus{background:#e8f8f1;color:#087c56}.inventory-item .difference.minus{background:#fff0f0;color:#b52d2d}.inventory-item .difference.zero{background:#f0f4f7;color:#536779}.inventory-history-item{border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:9px;background:#fff}.inventory-history-item b{font-size:14px}.inventory-history-item small{display:block;color:var(--muted);margin-top:4px;line-height:1.4}.inventory-history-item .inv-summary{margin-top:8px;font-size:12px;font-weight:800;color:#1c70dc}.bulkbox{min-height:150px;resize:vertical;line-height:1.45}
-.inventory-file-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.inventory-file-btn{min-height:52px;border:1px solid #bcd2e3;background:#fff;color:#1267ad;border-radius:14px;font-weight:800}.inventory-file-info{margin-top:9px;font-size:12px;color:var(--muted);line-height:1.4}.inventory-file-status{margin-top:10px}.inventory-file-status .status{margin:0}
-@media(max-width:600px){.inventory-file-row{grid-template-columns:1fr}}
 @media(max-width:600px){.inventory-grid,.inventory-actions{grid-template-columns:1fr}.inventory-item .balances{grid-template-columns:1fr 1fr 1fr}.inventory-item .balance{font-size:10px}.inventory-item .balance b{font-size:14px}}
 </style>
 
@@ -614,6 +606,15 @@ const SHEET_URL='https://docs.google.com/spreadsheets/d/1XNNRj4cvv34yUITVWSpGmEg
 function openSheetTab(gid){window.open(SHEET_URL+'?gid='+encodeURIComponent(gid)+'#gid='+encodeURIComponent(gid),'_blank','noopener');}
 
 const OBSERVACOES=['Para tarefa externa','Para uso da oficina','Para enrolamento de motor','Para uso em OS','Para uso da automação','Para tarefa interna','Para vendas','Para uso na peritagem'];
+const DESTINOS_SAIDA={
+  os:{label:'Ordem de Serviço',short:'OS',refLabel:'Referência da OS',placeholder:'Ex.: 4505 ou MANUTENÇÃO BOMBA 01'},
+  tarefa:{label:'Ordem de Tarefa',short:'Tarefa',refLabel:'Referência da tarefa',placeholder:'Ex.: 79761190 ou TAREFA-EXT-23'},
+  venda_balcao:{label:'Venda de balcão',short:'Venda de balcão',refLabel:'Referência da venda',placeholder:'Ex.: VENDA-001 ou nome do cliente'},
+  venda_externa:{label:'Venda externa',short:'Venda externa',refLabel:'Referência da venda',placeholder:'Ex.: PEDIDO-001 ou nome do cliente'},
+  emprestimo:{label:'Empréstimo',short:'Empréstimo',refLabel:'Referência do empréstimo',placeholder:'Ex.: EMP-001 ou responsável'},
+  uso_interno:{label:'Uso interno',short:'Uso interno',refLabel:'Setor / referência',placeholder:'Ex.: Oficina, Automação, Estoque'},
+  outro:{label:'Outro',short:'Outro',refLabel:'Referência',placeholder:'Informe a referência da saída'}
+};
 const state={page:'home',items:[],entryItems:[],order:null,returnItems:[],destination:'os',activities:[],inventoryItems:[]};
 const $=id=>document.getElementById(id);
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
@@ -647,7 +648,15 @@ function renderActivities(){if(!state.activities.length)return '<div class="empt
 function saveActivity(a){refreshRecent()}
 function loadActivities(){return []}
 function nowLabel(){return new Date().toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}
-function setDestination(type){state.destination=type;const os=$('destOS'),task=$('destTask');if(os){os.classList.toggle('active',type==='os');task.classList.toggle('active',type==='tarefa')}const lab=$('orderLabel'),inp=$('orderNumber');if(lab)lab.textContent=type==='os'?'Referência da OS':'Referência da tarefa';if(inp)inp.placeholder=type==='os'?'Ex.: 4505 ou BOMBA-01':'Ex.: TAREFA-EXT-23 ou BOMBA-01'}
+function setDestination(type){
+  if(!DESTINOS_SAIDA[type])type='os';
+  state.destination=type;
+  const cfg=DESTINOS_SAIDA[type];
+  const lab=$('orderLabel'),inp=$('orderNumber'),limit=$('saidaLimit');
+  if(lab)lab.textContent=cfg.refLabel;
+  if(inp){inp.placeholder=cfg.placeholder;inp.value='';}
+  if(limit)limit.textContent=type==='os'?'Materiais (máx. 15 por OS)':type==='tarefa'?'Materiais (máx. 20 por tarefa)':'Materiais';
+}
 let colaboradoresRequestId=0;
 
 async function carregarColaboradoresSaida(){
@@ -705,16 +714,25 @@ function renderNovaSaida(){state.items=[];$('content').innerHTML=`<h2 class="pag
   <option value="">Carregando colaboradores...</option>
 </select>
 <div id="receiverStatus" style="margin-top:6px;font-size:12px;color:#16805d"></div>
-</div><div class="field"><label>Para onde foi</label><div class="choice-grid"><button id="destOS" class="choice active" onclick="setDestination('os')">📋 OS<small>Ordem de Serviço</small></button><button id="destTask" class="choice" onclick="setDestination('tarefa')">🔧 Tarefa<small>Ordem de Tarefa</small></button></div></div><div class="field"><label id="orderLabel">Referência da OS</label><input id="orderNumber" class="input" type="text" maxlength="80" placeholder="Ex.: 4505 ou MANUTENÇÃO BOMBA 01"></div></section><section class="panel"><div class="limit">Materiais (máx. 15 por OS / 20 por tarefa)</div><div class="searchbox"><input id="materialSearch" class="input" placeholder="Digite o material, código ou marca" oninput="searchMaterial(this.value)"><div id="suggestions" class="suggestions" style="display:none"></div></div><div id="items" class="items" style="margin-top:10px"></div></section><section class="panel"><div class="summary" id="summary">Adicione os materiais que saíram do estoque.</div><button class="primary" style="margin-top:10px" onclick="confirmBaixa()">✓ REGISTRAR SAÍDA</button></section>`;
+</div><div class="field"><label>Para onde foi</label><select id="destination" class="select" onchange="setDestination(this.value)">
+  <option value="os">📋 Ordem de Serviço (OS)</option>
+  <option value="tarefa">🔧 Ordem de Tarefa</option>
+  <option value="venda_balcao">🛒 Venda de balcão</option>
+  <option value="venda_externa">🚚 Venda externa</option>
+  <option value="emprestimo">🤝 Empréstimo</option>
+  <option value="uso_interno">🏭 Uso interno</option>
+  <option value="outro">📦 Outro</option>
+</select></div><div class="field"><label id="orderLabel">Referência da OS</label><input id="orderNumber" class="input" type="text" maxlength="80" placeholder="Ex.: 4505 ou MANUTENÇÃO BOMBA 01"></div></section><section class="panel"><div id="saidaLimit" class="limit">Materiais (máx. 15 por OS)</div><div class="searchbox"><input id="materialSearch" class="input" placeholder="Digite o material, código ou marca" oninput="searchMaterial(this.value)"><div id="suggestions" class="suggestions" style="display:none"></div></div><div id="items" class="items" style="margin-top:10px"></div></section><section class="panel"><div class="summary" id="summary">Adicione os materiais que saíram do estoque.</div><button class="primary" style="margin-top:10px" onclick="confirmBaixa()">✓ REGISTRAR SAÍDA</button></section>`;
   carregarColaboradoresSaida();
+  setDestination('os');
 }
 let searchTimer;let materialRequestId=0;
 async function searchMaterial(q){clearTimeout(searchTimer);const box=$('suggestions'),term=q.trim();if(!term){materialRequestId++;box.style.display='none';return}if(term.length<2){box.style.display='none';return}const requestId=++materialRequestId;searchTimer=setTimeout(async()=>{try{const r=await jsonp({action:'products',q:term});if(requestId!==materialRequestId)return;if(!r.ok)throw new Error(r.error);const products=Array.isArray(r.products)?r.products:[];box.innerHTML=products.map(p=>`<button class="suggestion" onclick='addItem(${JSON.stringify(p)})'><span><b>${esc(p.code)}</b><small>${esc(p.description)}</small></span><span class="stock">Est.: ${esc(p.stock)}<br>${esc(p.unit)}</span></button>`).join('')||'<div class="suggestion">Nenhum material encontrado.</div>';box.style.display='block'}catch(e){if(requestId!==materialRequestId)return;toast(e.message)}},250)}
-function addItem(p){const max=state.destination==='os'?15:20;if(state.items.length>=max){toast(`Limite de ${max} itens atingido.`);return}if(state.items.some(x=>x.code===p.code)){toast('Esse material já foi adicionado.');return}state.items.push({...p,qty:1,note:''});renderItems();$('materialSearch').value='';$('suggestions').style.display='none'}
+function addItem(p){const max=state.destination==='os'?15:state.destination==='tarefa'?20:50;if(state.items.length>=max){toast(`Limite de ${max} itens atingido.`);return}if(state.items.some(x=>x.code===p.code)){toast('Esse material já foi adicionado.');return}state.items.push({...p,qty:1,note:''});renderItems();$('materialSearch').value='';$('suggestions').style.display='none'}
 function renderItems(){const el=$('items');if(!state.items.length){el.innerHTML='<div class="empty">Nenhum material adicionado.</div>';return}el.innerHTML=state.items.map((p,i)=>`<div class="item"><div class="itemtop"><span class="num">${i+1}</span><div class="desc">${esc(p.description)}</div><button class="remove" onclick="removeItem(${i})">🗑</button></div><div class="itemmeta">${esc(p.code)} • Estoque: ${esc(p.stock)} ${esc(p.unit)}</div><div class="itembottom"><input class="qty" type="number" min="0.001" step="any" value="${esc(p.qty)}" onchange="state.items[${i}].qty=Number(this.value)"><select class="input" style="height:42px" onchange="state.items[${i}].note=this.value"><option value="">Observação</option>${OBSERVACOES.map(o=>`<option value="${esc(o)}" ${p.note===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div></div>`).join('');$('summary').textContent=`${state.items.length} material(is) selecionado(s). Confira quantidade e observação antes de registrar.`}
 function removeItem(i){state.items.splice(i,1);renderItems()}
-function confirmBaixa(){const number=$('orderNumber').value.trim();const receiver=$('receiver').value.trim();if(!number)return toast('Informe a referência da OS/tarefa.');if(!receiver)return toast('Informe quem vai receber o material.');if(!state.items.length)return toast('Adicione pelo menos um material.');if(state.items.some(x=>!Number.isFinite(Number(x.qty))||Number(x.qty)<=0))return toast('Verifique as quantidades.');openModal(`<h3>Confirmar saída</h3><div class="summary"><b>${state.destination==='os'?'OS':'Tarefa'} ${esc(number)}</b><br>Recebedor: ${esc(receiver)}<br>Materiais: ${state.items.length}</div><div class="modalactions"><button class="primary" onclick="doBaixa()">CONFIRMAR SAÍDA</button><button class="secondary" onclick="closeModal()">CANCELAR</button></div>`)}
-async function doBaixa(){closeModal();toast('Enviando para a planilha...');const number=$('orderNumber').value.trim();const receiver=$('receiver').value.trim();const tx='WEB-'+Date.now()+'-'+Math.random().toString(36).slice(2,7).toUpperCase();try{const r=await post({action:'baixa',tx,type:state.destination,number,receiver,items:state.items.map(x=>({code:x.code,qty:Number(x.qty),unit:x.unit,note:x.note}))});saveActivity({kind:'saida',title:`${state.destination==='os'?'OS':'Tarefa'} ${number}`,detail:`${state.items.length} material(is) • ${receiver}`,when:nowLabel()});openModal(`<h3>✓ Saída realizada</h3><div class="status">${esc(r.message||'Operação concluída.')}</div><button class="primary" onclick="closeModal();nav('home')">VOLTAR AO INÍCIO</button>`)}catch(e){openModal(`<h3>Não foi possível concluir</h3><div class="status err">${esc(e.message)}</div><button class="secondary" onclick="closeModal()">FECHAR</button>`)}}
+function confirmBaixa(){const number=$('orderNumber').value.trim();const receiver=$('receiver').value.trim();const cfg=DESTINOS_SAIDA[state.destination]||DESTINOS_SAIDA.os;if(!number)return toast(`Informe ${cfg.refLabel.toLowerCase()}.`);if(!receiver)return toast('Informe quem vai receber o material.');if(!state.items.length)return toast('Adicione pelo menos um material.');if(state.items.some(x=>!Number.isFinite(Number(x.qty))||Number(x.qty)<=0))return toast('Verifique as quantidades.');openModal(`<h3>Confirmar saída</h3><div class="summary"><b>${esc(cfg.short)} — ${esc(number)}</b><br>Recebedor: ${esc(receiver)}<br>Materiais: ${state.items.length}</div><div class="modalactions"><button class="primary" onclick="doBaixa()">CONFIRMAR SAÍDA</button><button class="secondary" onclick="closeModal()">CANCELAR</button></div>`)}
+async function doBaixa(){closeModal();toast('Enviando para a planilha...');const number=$('orderNumber').value.trim();const receiver=$('receiver').value.trim();const cfg=DESTINOS_SAIDA[state.destination]||DESTINOS_SAIDA.os;const tx='WEB-'+Date.now()+'-'+Math.random().toString(36).slice(2,7).toUpperCase();try{const r=await post({action:'baixa',tx,type:state.destination,number,receiver,items:state.items.map(x=>({code:x.code,qty:Number(x.qty),unit:x.unit,note:x.note}))});saveActivity({kind:'saida',title:`${cfg.short} — ${number}`,detail:`${state.items.length} material(is) • ${receiver}`,when:nowLabel()});openModal(`<h3>✓ Saída realizada</h3><div class="status">${esc(r.message||'Operação concluída.')}</div><button class="primary" onclick="closeModal();nav('home')">VOLTAR AO INÍCIO</button>`)}catch(e){openModal(`<h3>Não foi possível concluir</h3><div class="status err">${esc(e.message)}</div><button class="secondary" onclick="closeModal()">FECHAR</button>`)}}
 function renderEntrada(){
   state.entryItems=[];
   $('content').innerHTML=`
@@ -830,17 +848,16 @@ function renderInventario(){
   $('content').innerHTML=`
   <h2 class="page-title">📋 Inventário</h2>
   <section class="panel">
-    <div class="summary"><b>Contagem física do estoque</b><br>Você pode contar material por material, colar uma lista ou importar um arquivo. Ao finalizar, o sistema atualiza <b>Contagem de inventário</b>, <b>Data do inventário</b> e <b>Estoque atual</b> na aba ESTOQUE.</div>
+    <div class="summary"><b>Contagem física do estoque</b><br>Você pode contar material por material ou colar uma lista completa. Ao finalizar, o sistema atualiza <b>Contagem de inventário</b>, <b>Data do inventário</b> e <b>Estoque atual</b> na aba ESTOQUE.</div>
   </section>
   <section class="panel">
     <div class="field"><label>Pesquisar material</label><div class="searchbox"><input id="inventorySearch" class="input" placeholder="Digite código, material, marca..." oninput="searchInventoryMaterial(this.value)"><div id="inventorySuggestions" class="suggestions" style="display:none"></div></div></div>
     <div class="field"><label>Ou inserir uma lista</label><textarea id="inventoryBulk" class="input bulkbox" placeholder="Ex.:\nROL001 5\nROL002 8\nROL003 0\nROL040 1"></textarea></div>
     <div class="inventory-actions"><button class="secondary" onclick="importInventoryList()">📋 LER LISTA</button><button class="secondary" onclick="loadInventoryDraft()">⟳ RECUPERAR RASCUNHO</button></div>
-    <div class="field" style="margin-top:14px"><label>📎 Importar arquivo de inventário</label><div class="inventory-file-row"><button class="inventory-file-btn" type="button" onclick="$('inventoryFile').click()">📎 SELECIONAR ARQUIVO</button><button class="secondary" type="button" onclick="clearInventoryFile()">✕ LIMPAR ARQUIVO</button></div><input id="inventoryFile" type="file" accept=".pdf,.png,.jpg,.jpeg,.xlsx,.xls,.docx,application/pdf,image/png,image/jpeg,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display:none" onchange="handleInventoryFile(this.files[0])"><div id="inventoryFileInfo" class="inventory-file-info">Aceitos: PDF, PNG, JPEG, Excel e Word. O arquivo será lido e os itens entrarão em conferência antes de qualquer alteração no estoque.</div><div id="inventoryFileStatus" class="inventory-file-status"></div></div>
   </section>
   <section class="panel">
     <div class="section-head"><div><h3>Materiais em conferência</h3><p id="inventoryCount">0 materiais</p></div><button class="refresh" onclick="clearInventoryDraftLocal()">Limpar</button></div>
-    <div id="inventoryItems" class="items"><div class="empty">Adicione um material, leia uma lista ou importe um arquivo.</div></div>
+    <div id="inventoryItems" class="items"><div class="empty">Adicione um material ou leia uma lista.</div></div>
     <div class="inventory-actions"><button class="secondary" onclick="saveInventoryDraft()">💾 SALVAR RASCUNHO</button><button class="primary greenbtn" onclick="confirmInventory()">✓ FINALIZAR INVENTÁRIO</button></div>
   </section>
   <section class="panel"><div class="section-head"><div><h3>📜 Histórico de inventários</h3><p>Contagens já finalizadas no ESTOQUE 360.</p></div><button class="refresh" onclick="loadInventoryHistory()">⟳ Atualizar</button></div><div class="field"><input id="inventoryHistorySearch" class="input" placeholder="Pesquisar por inventário, código ou material" oninput="loadInventoryHistory(this.value)"></div><div id="inventoryHistory" class="activity-list"><div class="empty">Carregando...</div></div></section>`;
@@ -855,196 +872,19 @@ async function searchInventoryMaterial(q){
     box.innerHTML=(r.products||[]).map(p=>`<button class="suggestion" onclick='addInventoryMaterial(${JSON.stringify(p)})'><span><b>${esc(p.code)}</b><small>${esc(p.description)}</small></span><span class="stock">Atual: ${esc(p.stock)}<br>${esc(p.unit||'UN')}</span></button>`).join('')||'<div class="suggestion">Nenhum material encontrado.</div>'; box.style.display='block';
   }catch(e){if(id!==inventorySearchId)return;toast(e.message)}},220);
 }
-function inventoryNowIso_(){return new Date().toISOString()}
-function inventoryNormalizeCode_(value){return String(value||'').trim().toUpperCase().replace(/\s+/g,'').replace(/[-_]/g,'')}
-function inventoryLooksLikeCode_(value){return /^[A-Z]{2,12}\d{2,6}$/i.test(inventoryNormalizeCode_(value))}
-function inventoryParseNumber_(value){
-  if(typeof value==='number')return Number.isFinite(value)?value:null;
-  let s=String(value??'').trim().replace(/\s/g,''); if(!s)return null;
-  s=s.replace(/^(qtd|quantidade|qtde|q)[:=]?/i,'').trim();
-  if(!/^-?[\d.,]+$/.test(s))return null;
-  if(s.includes(',')&&s.includes('.')){s=s.lastIndexOf(',')>s.lastIndexOf('.')?s.replace(/\./g,'').replace(',','.'):s.replace(/,/g,'')}
-  else if(s.includes(','))s=s.replace(',','.');
-  const n=Number(s); return Number.isFinite(n)?n:null;
-}
-function inventoryExtractPairsFromText_(text){
-  const out=[]; const lines=String(text||'').replace(/\r/g,'').split(/\n+/);
-  lines.forEach(raw=>{
-    const line=String(raw||'').replace(/\u00a0/g,' ').trim(); if(!line)return;
-    const tokens=line.split(/[\t;|]+/).map(x=>x.trim()).filter(Boolean);
-    let found=false;
-    for(let i=0;i<tokens.length;i++){
-      const code=inventoryNormalizeCode_(tokens[i]);
-      if(!inventoryLooksLikeCode_(tokens[i]))continue;
-      const candidates=[];
-      if(i+1<tokens.length)candidates.push(tokens[i+1]);
-      if(i+2<tokens.length)candidates.push(tokens[i+2]);
-      for(const c of candidates){const n=inventoryParseNumber_(c);if(n!==null&&n>=0){out.push({code,count:n});found=true;break}}
-      if(found)break;
-    }
-    if(found)return;
-    const m=line.match(/\b([A-Z]{2,12}\s*\d{2,6})\b\s*(?:[-–—:;|,\t]|\s)+(-?\d+(?:[\.,]\d+)?)/i);
-    if(m){const n=inventoryParseNumber_(m[2]);if(n!==null&&n>=0)out.push({code:inventoryNormalizeCode_(m[1]),count:n});return}
-    const m2=line.match(/^\s*([A-Z]{2,12}\s*\d{2,6})\s+(-?\d+(?:[\.,]\d+)?)\s*$/i);
-    if(m2){const n=inventoryParseNumber_(m2[2]);if(n!==null&&n>=0)out.push({code:inventoryNormalizeCode_(m2[1]),count:n})}
-  });
-  return out;
-}
-function inventoryParseExcel_(arrayBuffer){
-  if(!window.XLSX)throw new Error('Leitor de Excel não carregou. Atualize a página e tente novamente.');
-  const wb=XLSX.read(arrayBuffer,{type:'array',cellDates:true}); const pairs=[];
-  wb.SheetNames.forEach(name=>{
-    const rows=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,raw:true,defval:''});
-    rows.forEach(row=>{
-      const vals=Array.isArray(row)?row.map(v=>String(v??'').trim()):[]; let added=false;
-      for(let i=0;i<vals.length;i++){
-        if(!inventoryLooksLikeCode_(vals[i]))continue;
-        for(const j of [i+1,i-1,i+2,i-2]){
-          if(j<0||j>=vals.length)continue; const n=inventoryParseNumber_(vals[j]);
-          if(n!==null&&n>=0){pairs.push({code:inventoryNormalizeCode_(vals[i]),count:n});added=true;break}
-        }
-        if(added)break;
-      }
-      if(!added){pairs.push(...inventoryExtractPairsFromText_(vals.join('\t')))}
-    });
-  });
-  return pairs;
-}
-async function inventoryReadPdfText_(arrayBuffer){
-  if(!window.pdfjsLib)throw new Error('Leitor de PDF não carregou. Atualize a página e tente novamente.');
-  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise; let text='';
-  for(let pageNo=1;pageNo<=pdf.numPages;pageNo++){
-    const page=await pdf.getPage(pageNo); const content=await page.getTextContent();
-    text+=content.items.map(x=>x.str||'').join(' ')+'\n';
-  }
-  return {text,pdf};
-}
-async function inventoryOcrImage_(source,label){
-  if(!window.Tesseract)throw new Error('Leitor OCR não carregou. Atualize a página e tente novamente.');
-  setInventoryFileStatus_(`🔎 Lendo ${label} por OCR...`,'');
-  const result=await Tesseract.recognize(source,'por',{logger:m=>{if(m&&m.status&&typeof m.progress==='number'){setInventoryFileStatus_(`🔎 OCR: ${m.status} ${Math.round(m.progress*100)}%`,'')}}});
-  return result.data.text||'';
-}
-async function inventoryOcrPdf_(pdf){
-  let text='';
-  for(let pageNo=1;pageNo<=pdf.numPages;pageNo++){
-    setInventoryFileStatus_(`🔎 OCR da página ${pageNo}/${pdf.numPages}...`,'');
-    const page=await pdf.getPage(pageNo); const viewport=page.getViewport({scale:2});
-    const canvas=document.createElement('canvas'); canvas.width=Math.ceil(viewport.width); canvas.height=Math.ceil(viewport.height);
-    const ctx=canvas.getContext('2d'); await page.render({canvasContext:ctx,viewport}).promise;
-    text+='\n'+await inventoryOcrImage_(canvas,`página ${pageNo}`);
-  }
-  return text;
-}
-function inventoryMergeParsed_(pairs,sourceDate){
-  const map=new Map(state.inventoryItems.map(x=>[inventoryNormalizeCode_(x.code),x]));
-  const duplicateCodes=new Set();
-  pairs.forEach(item=>{
-    const code=inventoryNormalizeCode_(item.code); const count=Number(item.count);
-    if(!code||!inventoryLooksLikeCode_(code)||!Number.isFinite(count)||count<0)return;
-    if(map.has(code))duplicateCodes.add(code);
-    map.set(code,{...(map.get(code)||{}),code,count,inventoryDate:sourceDate,source:'arquivo'});
-  });
-  state.inventoryItems=Array.from(map.values());
-  return {duplicateCodes:[...duplicateCodes]};
-}
-async function inventoryResolvePairs_(pairs){
-  const clean=[]; const seen=new Set(); const errors=[];
-  pairs.forEach(x=>{
-    const code=inventoryNormalizeCode_(x.code);
-    const count=Number(x.count);
-    if(!code||!Number.isFinite(count)||count<0)return;
-    if(seen.has(code))return;
-    seen.add(code);
-    clean.push({code,count});
-  });
-
-  // IMPORTANTE: carrega o catálogo do ESTOQUE 360 uma única vez.
-  // Antes, era feita uma chamada à API para cada código importado.
-  setInventoryFileStatus_(`🔎 Encontrei ${clean.length} código(s). Carregando catálogo do ESTOQUE 360...`,'');
-  const catalogResponse=await jsonp({action:'inventorycatalog'});
-  if(!catalogResponse.ok)throw new Error(catalogResponse.error||'Não foi possível carregar o catálogo do estoque.');
-
-  const catalog=new Map();
-  (catalogResponse.products||[]).forEach(p=>{
-    const key=inventoryNormalizeCode_(p.code);
-    if(key)catalog.set(key,p);
-  });
-
-  const importedKeys=new Set(clean.map(x=>x.code));
-  const existingMap=new Map(state.inventoryItems.map(x=>[inventoryNormalizeCode_(x.code),x]));
-
-  clean.forEach(item=>{
-    const exact=catalog.get(item.code);
-    if(!exact){
-      errors.push(`${item.code}: código não encontrado no estoque`);
-      return;
-    }
-
-    const existing=existingMap.get(item.code);
-    const date=existing&&existing.inventoryDate?existing.inventoryDate:inventoryNowIso_();
-    const obj={
-      ...exact,
-      count:item.count,
-      note:existing?.note||'',
-      inventoryDate:date,
-      source:existing?.source||'arquivo'
-    };
-    existingMap.set(item.code,obj);
-  });
-
-  // Mantém materiais que já estavam na conferência, além dos importados.
-  state.inventoryItems=Array.from(existingMap.values());
-  renderInventoryItems();
-  return errors;
-}
-function setInventoryFileStatus_(message,error){const box=$('inventoryFileStatus');if(!box)return;box.innerHTML=message?`<div class="status${error?' err':''}">${esc(message)}</div>`:''}
-function clearInventoryFile(){const input=$('inventoryFile');if(input)input.value='';const info=$('inventoryFileInfo');if(info)info.textContent='Aceitos: PDF, PNG, JPEG, Excel e Word. O arquivo será lido e os itens entrarão em conferência antes de qualquer alteração no estoque.';setInventoryFileStatus_('','')}
-async function handleInventoryFile(file){
-  if(!file)return;
-  const sourceDate=inventoryNowIso_(); const ext=(file.name.split('.').pop()||'').toLowerCase();
-  const allowed=['pdf','png','jpg','jpeg','xlsx','xls','docx']; if(!allowed.includes(ext))return toast('Formato não suportado. Use PDF, PNG, JPEG, Excel ou Word.');
-  const info=$('inventoryFileInfo');if(info)info.textContent=`📎 ${file.name} • ${Math.max(1,Math.round(file.size/1024))} KB • leitura iniciada em ${new Date(sourceDate).toLocaleString('pt-BR')}`;
-  setInventoryFileStatus_('📖 Preparando leitura...','');
-  try{
-    let pairs=[]; let rawText='';
-    if(ext==='xlsx'||ext==='xls'){
-      pairs=inventoryParseExcel_(await file.arrayBuffer());
-    }else if(ext==='docx'){
-      if(!window.mammoth)throw new Error('Leitor de Word não carregou. Atualize a página e tente novamente.');
-      const result=await mammoth.extractRawText({arrayBuffer:await file.arrayBuffer()}); rawText=result.value||''; pairs=inventoryExtractPairsFromText_(rawText);
-    }else if(ext==='pdf'){
-      const result=await inventoryReadPdfText_(await file.arrayBuffer()); rawText=result.text||''; pairs=inventoryExtractPairsFromText_(rawText);
-      if(pairs.length===0){setInventoryFileStatus_('📄 PDF sem texto detectável. Iniciando OCR...','');rawText=await inventoryOcrPdf_(result.pdf);pairs=inventoryExtractPairsFromText_(rawText)}
-    }else{
-      rawText=await inventoryOcrImage_(file,file.name); pairs=inventoryExtractPairsFromText_(rawText);
-    }
-    if(!pairs.length)throw new Error('Não encontrei linhas no formato código + quantidade. Exemplo: ROL001 5.');
-    const unique=[];const seen=new Set();pairs.forEach(p=>{const k=inventoryNormalizeCode_(p.code);if(!seen.has(k)){seen.add(k);unique.push({...p,code:k})}});
-    setInventoryFileStatus_(`🔎 Encontrei ${unique.length} código(s). Validando no estoque...`,'');
-    const beforeCount=state.inventoryItems.length;
-    const errors=await inventoryResolvePairs_(unique.map(p=>({...p,inventoryDate:sourceDate})));
-    // Force the import timestamp on every newly imported item.
-    state.inventoryItems.forEach(x=>{if(unique.some(p=>inventoryNormalizeCode_(p.code)===inventoryNormalizeCode_(x.code))){x.inventoryDate=sourceDate;x.source='arquivo'}});
-    renderInventoryItems();
-    if(errors.length){setInventoryFileStatus_(`⚠️ Arquivo lido. ${unique.length-errors.length} item(ns) carregado(s) e ${errors.length} não encontrado(s). Corrija/remova os códigos sinalizados antes de finalizar.` ,'');toast(`${unique.length-errors.length} item(ns) carregado(s). ${errors.length} erro(s).`)}
-    else{setInventoryFileStatus_(`✅ Arquivo lido com sucesso: ${unique.length} item(ns) em conferência. Nenhuma alteração foi feita no estoque ainda.`,'');toast(`${unique.length} item(ns) importado(s).`)}
-  }catch(e){setInventoryFileStatus_(e.message||String(e),true);toast(e.message||String(e))}
-}
 function addInventoryMaterial(p){
   const code=String(p.code||'').trim(); if(!code)return;
   const idx=state.inventoryItems.findIndex(x=>String(x.code).toUpperCase()===code.toUpperCase());
   if(idx>=0){toast('Esse material já está no inventário.');return}
-  state.inventoryItems.push({...p,count:Number(p.stock)||0,note:'',inventoryDate:inventoryNowIso_(),source:'manual'});
+  state.inventoryItems.push({...p,count:Number(p.stock)||0,note:''});
   renderInventoryItems(); $('inventorySearch').value=''; $('inventorySuggestions').style.display='none';
 }
 function renderInventoryItems(){
   const el=$('inventoryItems'),count=$('inventoryCount'); if(!el)return; count.textContent=`${state.inventoryItems.length} material(is) em conferência`;
-  if(!state.inventoryItems.length){el.innerHTML='<div class="empty">Adicione um material, leia uma lista ou importe um arquivo.</div>';return}
-  el.innerHTML=state.inventoryItems.map((p,i)=>{const d=Number(p.count)-Number(p.stock||0);const cls=d>0?'plus':d<0?'minus':'zero';const sign=d>0?'+':'';const when=p.inventoryDate?new Date(p.inventoryDate).toLocaleString('pt-BR'):'agora';const source=p.source==='arquivo'?'📎 Arquivo':'✍️ Manual';return `<div class="inventory-item"><div class="toprow"><span class="num">${i+1}</span><div class="desc">${esc(p.description)}<div class="meta">${esc(p.code)} • ${esc(p.unit||'UN')} • ${source}<br>Data da conferência: ${esc(when)}</div></div><button class="remove" onclick="removeInventoryItem(${i})">🗑</button></div><div class="balances"><div class="balance">ESTOQUE SISTEMA<b>${esc(p.stock)}</b></div><div class="balance">CONTAGEM FÍSICA<b><input class="qty" style="width:100%;height:38px" type="number" min="0" step="any" value="${esc(p.count)}" onchange="setInventoryCount(${i},this.value)"></b></div><div class="difference ${cls}">DIFERENÇA<b>${sign}${esc(d)}</b></div></div></div>`}).join('');
+  if(!state.inventoryItems.length){el.innerHTML='<div class="empty">Adicione um material ou leia uma lista.</div>';return}
+  el.innerHTML=state.inventoryItems.map((p,i)=>{const d=Number(p.count)-Number(p.stock||0);const cls=d>0?'plus':d<0?'minus':'zero';const sign=d>0?'+':'';return `<div class="inventory-item"><div class="toprow"><span class="num">${i+1}</span><div class="desc">${esc(p.description)}<div class="meta">${esc(p.code)} • ${esc(p.unit||'UN')}</div></div><button class="remove" onclick="removeInventoryItem(${i})">🗑</button></div><div class="balances"><div class="balance">ESTOQUE SISTEMA<b>${esc(p.stock)}</b></div><div class="balance">CONTAGEM FÍSICA<b><input class="qty" style="width:100%;height:38px" type="number" min="0" step="any" value="${esc(p.count)}" onchange="setInventoryCount(${i},this.value)"></b></div><div class="difference ${cls}">DIFERENÇA<b>${sign}${esc(d)}</b></div></div></div>`}).join('');
 }
-function setInventoryCount(i,v){const n=Number(v);if(!Number.isFinite(n)||n<0){toast('A contagem deve ser zero ou maior.');return}state.inventoryItems[i].count=n;if(!state.inventoryItems[i].inventoryDate)state.inventoryItems[i].inventoryDate=inventoryNowIso_();renderInventoryItems()}
+function setInventoryCount(i,v){const n=Number(v);if(!Number.isFinite(n)||n<0){toast('A contagem deve ser zero ou maior.');return}state.inventoryItems[i].count=n;renderInventoryItems()}
 function removeInventoryItem(i){state.inventoryItems.splice(i,1);renderInventoryItems()}
 function clearInventoryDraftLocal(){state.inventoryItems=[];renderInventoryItems()}
 function parseInventoryLine(line){
@@ -1059,30 +899,30 @@ function parseInventoryLine(line){
 async function importInventoryList(){
   const text=String($('inventoryBulk').value||''); if(!text.trim())return toast('Cole a lista de códigos e quantidades.');
   const parsed=text.split(/\r?\n/).map(parseInventoryLine).filter(Boolean); const invalid=parsed.filter(x=>!x.code||!Number.isFinite(x.count)||x.count<0);
-  if(invalid.length)return toast(`Não consegui ler ${invalid.length} linha(s). Use: CÓDIGO QUANTIDADE — Ex.: ROL001 5`);
-  const sourceDate=inventoryNowIso_(); const results=[]; const errors=[];
+  if(invalid.length)return toast(`Não consegui ler ${invalid.length} linha(s). Use: ROL001 5`);
+  const results=[]; const errors=[];
   for(const item of parsed){
-    try{const r=await jsonp({action:'inventoryproducts',q:item.code});const exact=(r.products||[]).find(p=>inventoryNormalizeCode_(p.code)===inventoryNormalizeCode_(item.code)); if(!exact)throw new Error(`${item.code}: código não encontrado`); results.push({...exact,count:item.count,note:'',inventoryDate:sourceDate,source:'lista'});}catch(e){errors.push(e.message)}
+    try{const r=await jsonp({action:'inventoryproducts',q:item.code});const exact=(r.products||[]).find(p=>String(p.code).trim().toUpperCase()===item.code.trim().toUpperCase()); if(!exact)throw new Error(`${item.code}: código não encontrado`); results.push({...exact,count:item.count,note:''});}catch(e){errors.push(e.message)}
   }
-  const map=new Map(state.inventoryItems.map(x=>[inventoryNormalizeCode_(x.code),x])); results.forEach(x=>map.set(inventoryNormalizeCode_(x.code),x)); state.inventoryItems=Array.from(map.values()); renderInventoryItems();
+  const map=new Map(state.inventoryItems.map(x=>[String(x.code).toUpperCase(),x])); results.forEach(x=>map.set(String(x.code).toUpperCase(),x)); state.inventoryItems=Array.from(map.values()); renderInventoryItems();
   if(errors.length)toast(`Lista carregada com ${errors.length} erro(s). Veja os códigos não encontrados.`); else toast(`${results.length} material(is) carregado(s).`);
   if($('inventoryBulk'))$('inventoryBulk').value='';
 }
 async function saveInventoryDraft(){
   if(!state.inventoryItems.length)return toast('Adicione pelo menos um material.');
-  const tx='INVDRAFT-'+Date.now(); try{const r=await post({action:'inventariosalvar',tx,responsavel:'',items:state.inventoryItems.map(x=>({code:x.code,count:Number(x.count),unit:x.unit,note:x.note||'',date:x.inventoryDate||inventoryNowIso_()}))});toast(r.message||'Rascunho salvo.')}catch(e){toast(e.message)}
+  const tx='INVDRAFT-'+Date.now(); try{const r=await post({action:'inventariosalvar',tx,responsavel:'',items:state.inventoryItems.map(x=>({code:x.code,count:Number(x.count),unit:x.unit,note:x.note||''}))});toast(r.message||'Rascunho salvo.')}catch(e){toast(e.message)}
 }
 async function loadInventoryDraft(){
-  try{const r=await jsonp({action:'inventorycurrent'});if(!r.ok)throw new Error(r.error);if(Array.isArray(r.items)&&r.items.length){state.inventoryItems=r.items.map(x=>({code:x.code,description:x.description,stock:Number(x.stock)||0,count:Number(x.count)||0,difference:Number(x.difference)||0,unit:x.unit||'Unidade (UN)',note:x.note||'',inventoryDate:x.inventoryDate||x.date||'',source:x.source||'rascunho'}));renderInventoryItems()}}catch(e){toast(e.message)}
+  try{const r=await jsonp({action:'inventorycurrent'});if(!r.ok)throw new Error(r.error);if(Array.isArray(r.items)&&r.items.length){state.inventoryItems=r.items.map(x=>({code:x.code,description:x.description,stock:Number(x.stock)||0,count:Number(x.count)||0,difference:Number(x.difference)||0,unit:x.unit||'Unidade (UN)',note:x.note||''}));renderInventoryItems()}}catch(e){toast(e.message)}
 }
 function confirmInventory(){
   if(!state.inventoryItems.length)return toast('Adicione pelo menos um material.');
   const adjustments=state.inventoryItems.filter(x=>Number(x.count)!==Number(x.stock||0)).length;
-  openModal(`<h3>Confirmar inventário?</h3><div class="summary"><b>${state.inventoryItems.length}</b> material(is) serão atualizados.<br><b>${adjustments}</b> terão diferença de estoque.<br><br>O sistema atualizará <b>Contagem de inventário</b>, <b>Data do inventário</b> e <b>Estoque atual</b> de cada material usando a data em que ele foi adicionado/importado.</div><div class="modalactions"><button class="primary greenbtn" onclick="doFinalizeInventory()">CONFIRMAR INVENTÁRIO</button><button class="secondary" onclick="closeModal()">CANCELAR</button></div>`);
+  openModal(`<h3>Confirmar inventário?</h3><div class="summary"><b>${state.inventoryItems.length}</b> material(is) serão atualizados.<br><b>${adjustments}</b> terão diferença de estoque.<br><br>O sistema atualizará a contagem, a data do inventário e o estoque atual.</div><div class="modalactions"><button class="primary greenbtn" onclick="doFinalizeInventory()">CONFIRMAR INVENTÁRIO</button><button class="secondary" onclick="closeModal()">CANCELAR</button></div>`);
 }
 async function doFinalizeInventory(){
   closeModal();toast('Finalizando inventário...'); const tx='INV-'+Date.now()+'-'+Math.random().toString(36).slice(2,7).toUpperCase();
-  try{const r=await post({action:'inventariofinalizar',tx,responsavel:'',items:state.inventoryItems.map(x=>({code:x.code,count:Number(x.count),unit:x.unit,note:x.note||'',date:x.inventoryDate||inventoryNowIso_()}))}); state.inventoryItems=[]; renderInventario(); openModal(`<h3>✓ Inventário finalizado</h3><div class="status">${esc(r.message||'Inventário atualizado com sucesso.')}</div><button class="primary" onclick="closeModal();nav('inventory')">CONTINUAR</button>`)}catch(e){openModal(`<h3>Não foi possível concluir</h3><div class="status err">${esc(e.message)}</div><button class="secondary" onclick="closeModal()">FECHAR</button>`)}
+  try{const r=await post({action:'inventariofinalizar',tx,responsavel:'',items:state.inventoryItems.map(x=>({code:x.code,count:Number(x.count),unit:x.unit,note:x.note||''}))}); state.inventoryItems=[]; renderInventario(); openModal(`<h3>✓ Inventário finalizado</h3><div class="status">${esc(r.message||'Inventário atualizado com sucesso.')}</div><button class="primary" onclick="closeModal();nav('inventory')">CONTINUAR</button>`)}catch(e){openModal(`<h3>Não foi possível concluir</h3><div class="status err">${esc(e.message)}</div><button class="secondary" onclick="closeModal()">FECHAR</button>`)}
 }
 let inventoryHistoryTimer;
 async function loadInventoryHistory(q){clearTimeout(inventoryHistoryTimer);inventoryHistoryTimer=setTimeout(async()=>{const box=$('inventoryHistory');if(!box)return;try{const r=await jsonp({action:'inventoryhistory',limit:50,q:String(q||'').trim()});if(!r.ok)throw new Error(r.error);const list=r.inventories||[];box.innerHTML=list.length?list.map(inv=>`<div class="inventory-history-item"><b>📋 ${esc(inv.numero||inv.tx)}</b><small>${esc(formatServerDate(inv.date))} • Responsável: ${esc(inv.responsavel||'Não identificado')}</small><div class="inv-summary">${inv.total} material(is) • ${inv.adjustments} ajuste(s)</div></div>`).join(''):'<div class="empty">Nenhum inventário encontrado.</div>'}catch(e){box.innerHTML=`<div class="status err">${esc(e.message)}</div>`}},250)}
@@ -1274,15 +1114,16 @@ function startEditMovement(tx){
 function editBack(){state.editMovement=null;state.editItems=[];nav('home')}
 function renderEditSaida(m){
   state.page='edit';$('backBtn').hidden=false;
+  const currentType=DESTINOS_SAIDA[m.type]?m.type:'os';
   $('content').innerHTML=`<div class="editbar"><button onclick="editBack()">← Voltar</button><h2 class="page-title" style="margin:0">✏️ Editar saída</h2></div>
   <section class="panel"><div class="field"><label>Quem pediu / vai receber</label><input id="editReceiver" class="input" value="${esc(m.receiver||'')}"></div>
-  <div class="field"><label>Destino</label><div class="choice-grid"><button id="editOS" class="choice ${m.type==='os'?'active':''}" onclick="setEditType('os')">📋 OS</button><button id="editTask" class="choice ${m.type==='tarefa'?'active':''}" onclick="setEditType('tarefa')">🔧 Tarefa</button></div></div>
-  <div class="field"><label>Referência</label><input id="editNumber" class="input" type="text" maxlength="80" value="${esc(m.number||'')}"></div></section>
+  <div class="field"><label>Destino</label><select id="editType" class="select" onchange="setEditType(this.value)">${Object.keys(DESTINOS_SAIDA).map(k=>`<option value="${k}" ${currentType===k?'selected':''}>${esc(DESTINOS_SAIDA[k].label)}</option>`).join('')}</select></div>
+  <div class="field"><label id="editNumberLabel">${esc(DESTINOS_SAIDA[currentType].refLabel)}</label><input id="editNumber" class="input" type="text" maxlength="80" value="${esc(m.number||'')}" placeholder="${esc(DESTINOS_SAIDA[currentType].placeholder)}"></div></section>
   <section class="panel"><div class="searchbox"><input id="editSearch" class="input" placeholder="Adicionar material..." oninput="searchEditMaterial(this.value)"><div id="editSuggestions" class="suggestions" style="display:none"></div></div><div id="editItems" class="items" style="margin-top:10px"></div></section>
   <section class="panel"><div class="summary">A edição estorna a saída original e aplica a nova versão em uma única operação.</div><button class="primary" onclick="confirmEdit()">✓ SALVAR ALTERAÇÕES</button></section>`;
-  state.editType=m.type||'os';renderEditItems();
+  state.editType=currentType;renderEditItems();
 }
-function setEditType(type){state.editType=type;$('editOS').classList.toggle('active',type==='os');$('editTask').classList.toggle('active',type==='tarefa')}
+function setEditType(type){if(!DESTINOS_SAIDA[type])type='os';state.editType=type;const cfg=DESTINOS_SAIDA[type];const label=$('editNumberLabel'),input=$('editNumber');if(label)label.textContent=cfg.refLabel;if(input){input.placeholder=cfg.placeholder;input.value='';}}
 async function searchEditMaterial(q){
   const box=$('editSuggestions'),term=q.trim();
   if(!term){box.style.display='none';return}
@@ -1332,7 +1173,8 @@ function confirmEdit(){
   if(m.kind==='saida'){
     const number=$('editNumber').value.trim();const receiver=$('editReceiver').value.trim();
     if(!number||!receiver)return toast('Informe número e recebedor.');
-    openModal(`<h3>Salvar edição?</h3><div class="summary">${esc(state.editType==='os'?'OS':'Tarefa')} ${esc(number)}<br>${esc(receiver)}<br>${items.length} material(is)</div><div class="modalactions"><button class="primary" onclick="doEdit()">CONFIRMAR EDIÇÃO</button><button class="secondary" onclick="closeModal()">CANCELAR</button></div>`);
+    const cfg=DESTINOS_SAIDA[state.editType]||DESTINOS_SAIDA.os;
+    openModal(`<h3>Salvar edição?</h3><div class="summary">${esc(cfg.short)} — ${esc(number)}<br>${esc(receiver)}<br>${items.length} material(is)</div><div class="modalactions"><button class="primary" onclick="doEdit()">CONFIRMAR EDIÇÃO</button><button class="secondary" onclick="closeModal()">CANCELAR</button></div>`);
   }else if(m.kind==='entrada'){
     const supplier=$('editSupplier').value.trim(),nf=$('editNF').value.trim();if(!supplier||!nf)return toast('Informe fornecedor e NF-e.');
     openModal(`<h3>Salvar edição?</h3><div class="summary">NF-e ${esc(nf)}<br>${esc(supplier)}<br>${items.length} material(is)</div><div class="modalactions"><button class="primary greenbtn" onclick="doEdit()">CONFIRMAR EDIÇÃO</button><button class="secondary" onclick="closeModal()">CANCELAR</button></div>`);

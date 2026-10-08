@@ -1,4 +1,4 @@
-const CACHE_NAME = 'estoque-360-v20';
+const CACHE_NAME = 'estoque-360-v21';
 const CORE = [
   './',
   './index.html',
