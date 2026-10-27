@@ -724,12 +724,96 @@ function renderNovaSaida(){state.items=[];$('content').innerHTML=`<h2 class="pag
   <option value="emprestimo">🤝 Empréstimo</option>
   <option value="uso_interno">🏭 Uso interno</option>
   <option value="outro">📦 Outro</option>
-</select></div><div class="field" id="destinationReference"><label id="orderLabel">Referência da OS</label><input id="orderNumber" class="input" type="text" maxlength="80" placeholder="Ex.: 4505 ou MANUTENÇÃO BOMBA 01"></div></section><section class="panel"><div id="saidaLimit" class="limit">Materiais (máx. 15 por OS)</div><div class="searchbox"><input id="materialSearch" class="input" placeholder="Digite o material, código ou marca" oninput="searchMaterial(this.value)"><div id="suggestions" class="suggestions" style="display:none"></div></div><div id="items" class="items" style="margin-top:10px"></div></section><section class="panel"><div class="summary" id="summary">Adicione os materiais que saíram do estoque.</div><button class="primary" style="margin-top:10px" onclick="confirmBaixa()">✓ REGISTRAR SAÍDA</button></section>`;
+</select></div><div class="field" id="destinationReference"><label id="orderLabel">Referência da OS</label><input id="orderNumber" class="input" type="text" maxlength="80" placeholder="Ex.: 4505 ou MANUTENÇÃO BOMBA 01"></div></section><section class="panel">
+  <div id="saidaLimit" class="limit">Materiais (máx. 15 por OS)</div>
+  <div class="searchbox"><input id="materialSearch" class="input" placeholder="Digite o material, código ou marca" oninput="searchMaterial(this.value)"><div id="suggestions" class="suggestions" style="display:none"></div></div>
+  <div class="field" style="margin-top:14px">
+    <label>Ou inserir uma lista de materiais</label>
+    <textarea id="saidaBulk" class="input bulkbox" placeholder="Ex.:\nROL008 2\nROL010 1\nORI004 5\nINS049 3"></textarea>
+    <div class="inventory-actions"><button class="secondary" type="button" onclick="importExitList()">📋 LER LISTA</button><button class="secondary" type="button" onclick="clearExitList()">LIMPAR LISTA</button></div>
+    <div class="hint" style="font-size:12px;color:#66788a;margin-top:6px">Informe código ou descrição do material seguido da quantidade. Ex.: ROL008 2. Os itens serão carregados para conferência; nada será baixado até você confirmar a saída.</div>
+  </div>
+  <div id="items" class="items" style="margin-top:10px"></div>
+</section><section class="panel"><div class="summary" id="summary">Adicione os materiais que saíram do estoque.</div><button class="primary" style="margin-top:10px" onclick="confirmBaixa()">✓ REGISTRAR SAÍDA</button></section>`;
   carregarColaboradoresSaida();
   setDestination('os');
 }
 let searchTimer;let materialRequestId=0;
 async function searchMaterial(q){clearTimeout(searchTimer);const box=$('suggestions'),term=q.trim();if(!term){materialRequestId++;box.style.display='none';return}if(term.length<2){box.style.display='none';return}const requestId=++materialRequestId;searchTimer=setTimeout(async()=>{try{const r=await jsonp({action:'products',q:term});if(requestId!==materialRequestId)return;if(!r.ok)throw new Error(r.error);const products=Array.isArray(r.products)?r.products:[];box.innerHTML=products.map(p=>`<button class="suggestion" onclick='addItem(${JSON.stringify(p)})'><span><b>${esc(p.code)}</b><small>${esc(p.description)}</small></span><span class="stock">Est.: ${esc(p.stock)}<br>${esc(p.unit)}</span></button>`).join('')||'<div class="suggestion">Nenhum material encontrado.</div>';box.style.display='block'}catch(e){if(requestId!==materialRequestId)return;toast(e.message)}},250)}
+
+function parseExitLine(line){
+  let t=String(line||'').trim();
+  if(!t)return null;
+  t=t.replace(/^[-•]+\s*/, '');
+  const m=t.match(/^(.+?)\s*(?:\||;|\t|,)\s*(\d+(?:[\.,]\d+)?)\s*$/)
+       || t.match(/^(.+?)\s+(\d+(?:[\.,]\d+)?)\s*$/);
+  if(!m)return {term:t,qty:null};
+  return {term:m[1].trim(),qty:Number(m[2].replace(',','.'))};
+}
+function normalizeExitMatch(value){
+  return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toUpperCase().replace(/[^A-Z0-9]+/g,' ').trim().replace(/\s+/g,' ');
+}
+function clearExitList(){
+  const el=$('saidaBulk');
+  if(el)el.value='';
+}
+async function importExitList(){
+  const text=String($('saidaBulk')?.value||'');
+  if(!text.trim())return toast('Cole a lista de materiais e quantidades.');
+  const parsed=text.split(/\r?\n/).map(parseExitLine).filter(Boolean);
+  const invalid=parsed.filter(x=>!x.term||!Number.isFinite(x.qty)||x.qty<=0);
+  if(invalid.length){
+    return openModal(`<h3>Confira a lista</h3><div class="status err">${invalid.length} linha(s) não têm quantidade válida. Use o formato: <b>ROL008 2</b>.</div><button class="secondary" onclick="closeModal()">FECHAR</button>`);
+  }
+
+  const max=state.destination==='os'?15:state.destination==='tarefa'?20:50;
+  const resolved=[];
+  const errors=[];
+  for(let i=0;i<parsed.length;i++){
+    const line=parsed[i];
+    try{
+      const r=await jsonp({action:'products',q:line.term});
+      if(!r||!r.ok)throw new Error(r?.error||'Falha na consulta');
+      const products=Array.isArray(r.products)?r.products:[];
+      const needle=line.term.trim();
+      let matches=products.filter(p=>String(p.code||'').trim().toUpperCase()===needle.toUpperCase());
+      if(!matches.length){
+        const descKey=normalizeExitMatch(needle);
+        matches=products.filter(p=>normalizeExitMatch(p.description)===descKey);
+      }
+      if(matches.length===0)throw new Error(`linha ${i+1}: "${needle}" não encontrado`);
+      if(matches.length>1)throw new Error(`linha ${i+1}: "${needle}" corresponde a mais de um material; use o código`);
+      resolved.push({...matches[0],qty:line.qty,note:''});
+    }catch(e){
+      errors.push(String(e.message||e));
+    }
+  }
+
+  if(errors.length){
+    openModal(`<h3>Não foi possível ler toda a lista</h3><div class="status err">${errors.map(esc).join('<br>')}</div><p>Corrija as linhas indicadas e leia a lista novamente. Nenhum item desta lista foi adicionado.</p><button class="secondary" onclick="closeModal()">FECHAR</button>`);
+    return;
+  }
+
+  const merged=new Map();
+  [...state.items,...resolved].forEach(p=>{
+    const key=String(p.code||'').trim().toUpperCase();
+    if(!merged.has(key))merged.set(key,{...p,qty:Number(p.qty)||1,note:p.note||''});
+    else merged.get(key).qty+=Number(p.qty)||1;
+  });
+  const next=Array.from(merged.values());
+  if(next.length>max){
+    return openModal(`<h3>Limite de materiais excedido</h3><div class="status err">Este destino permite até ${max} materiais diferentes. A lista resultaria em ${next.length} materiais. Nenhum item foi adicionado.</div><button class="secondary" onclick="closeModal()">FECHAR</button>`);
+  }
+
+  state.items=next;
+  renderItems();
+  clearExitList();
+  if($('materialSearch'))$('materialSearch').value='';
+  if($('suggestions'))$('suggestions').style.display='none';
+  toast(`${resolved.length} linha(s) lida(s); confira quantidades e observações antes de registrar.`);
+}
+
 function addItem(p){const max=state.destination==='os'?15:state.destination==='tarefa'?20:50;if(state.items.length>=max){toast(`Limite de ${max} itens atingido.`);return}if(state.items.some(x=>x.code===p.code)){toast('Esse material já foi adicionado.');return}state.items.push({...p,qty:1,note:''});renderItems();$('materialSearch').value='';$('suggestions').style.display='none'}
 function renderItems(){const el=$('items');if(!state.items.length){el.innerHTML='<div class="empty">Nenhum material adicionado.</div>';return}el.innerHTML=state.items.map((p,i)=>`<div class="item"><div class="itemtop"><span class="num">${i+1}</span><div class="desc">${esc(p.description)}</div><button class="remove" onclick="removeItem(${i})">🗑</button></div><div class="itemmeta">${esc(p.code)} • Estoque: ${esc(p.stock)} ${esc(p.unit)}</div><div class="itembottom"><input class="qty" type="number" min="0.001" step="any" value="${esc(p.qty)}" onchange="state.items[${i}].qty=Number(this.value)"><select class="input" style="height:42px" onchange="state.items[${i}].note=this.value"><option value="">Observação</option>${OBSERVACOES.map(o=>`<option value="${esc(o)}" ${p.note===o?'selected':''}>${esc(o)}</option>`).join('')}</select></div></div>`).join('');$('summary').textContent=`${state.items.length} material(is) selecionado(s). Confira quantidade e observação antes de registrar.`}
 function removeItem(i){state.items.splice(i,1);renderItems()}
