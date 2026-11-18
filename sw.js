@@ -1,4 +1,4 @@
-const CACHE_NAME = 'estoque-360-calendar-v28';
+const CACHE_NAME = 'estoque-360-alertas-v30';
 const CORE = [
   './',
   './index.html',
