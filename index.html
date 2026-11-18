@@ -623,7 +623,7 @@ function toast(msg){$('toast').textContent=msg;$('toast').style.display='block';
 function apiReady(){if(API_URL.startsWith('COLE_')){toast('Configure a URL da API no index.html.');return false}return true}
 function jsonp(params){return new Promise((resolve,reject)=>{if(!apiReady())return reject(new Error('API não configurada.'));const cb='cb_'+Date.now()+'_'+Math.random().toString(36).slice(2);const script=document.createElement('script');const qs=new URLSearchParams({...params,callback:cb});const timer=setTimeout(()=>{cleanup();reject(new Error('Tempo esgotado ao consultar a planilha.'))},30000);function cleanup(){clearTimeout(timer);delete window[cb];script.remove()}window[cb]=data=>{cleanup();resolve(data)};script.onerror=()=>{cleanup();reject(new Error('Não foi possível conectar à API.'))};script.src=API_URL+'?'+qs.toString();document.body.appendChild(script)})}
 function post(payload){return new Promise((resolve,reject)=>{if(!apiReady())return reject(new Error('API não configurada.'));const form=document.createElement('form');form.method='POST';form.action=API_URL;form.target='postFrame';form.style.display='none';const input=document.createElement('input');input.type='hidden';input.name='payload';input.value=JSON.stringify(payload);form.appendChild(input);document.body.appendChild(form);form.submit();form.remove();const started=Date.now();const poll=async()=>{try{const r=await jsonp({action:'status',tx:payload.tx});if(r.ok&&(r.status==='CONCLUIDO'||r.status==='ERRO'))return r.status==='CONCLUIDO'?resolve(r.result||r):reject(new Error(r.message||'Falha na operação.'))}catch(e){}if(Date.now()-started>25000)return reject(new Error('A planilha não confirmou a operação no tempo esperado.'));setTimeout(poll,1000)};setTimeout(poll,900)})}
-function nav(page){state.page=page;closeModal();if(page==='home')renderHome();if(page==='new')renderNovaSaida();if(page==='return')renderReturn();if(page==='returnLookup')renderReturnLookup();if(page==='stock')renderStock();if(page==='inventory')renderInventario();if(page==='entry')renderEntrada();if(page==='history')renderHistory();if(page==='today')renderToday();$('backBtn').hidden=page==='home'}
+function nav(page){state.page=page;closeModal();if(page==='home')renderHome();if(page==='new')renderNovaSaida();if(page==='return')renderReturn();if(page==='returnLookup')renderReturnLookup();if(page==='stock')renderStock();if(page==='inventory')renderInventario();if(page==='entry')renderEntrada();if(page==='history')renderHistory();if(page==='today')renderToday();if(page==='stockAlerts')renderStockAlerts();$('backBtn').hidden=page==='home'}
 $('backBtn').onclick=()=>nav('home');$('homeBtn').onclick=()=>nav('home');
 function renderNav(){return `<nav class="navbar"><button class="navbtn ${state.page==='home'?'active':''}" onclick="nav('home')"><span class="navicon">⌂</span>Início</button><button class="navbtn ${state.page==='new'?'active':''}" onclick="nav('new')"><span class="navicon">📦</span>Nova saída</button><button class="navbtn ${state.page==='return'?'active':''}" onclick="nav('return')"><span class="navicon">↩</span>Movimentações</button><button class="navbtn ${state.page==='history'?'active':''}" onclick="nav('history')"><span class="navicon">◷</span>Histórico</button></nav>`}
 function renderHome(){state.page='home';$('content').innerHTML=`
@@ -634,7 +634,7 @@ function renderHome(){state.page='home';$('content').innerHTML=`
   <button class="navbtn" onclick="nav('stock')"><span class="navicon">🔎</span>Consultar estoque</button>
   <button class="navbtn" onclick="nav('inventory')"><span class="navicon">📋</span>Inventário</button>
   <button class="navbtn" onclick="nav('entry')"><span class="navicon">📥</span>Entrada produtos</button>
-  <button class="navbtn" onclick="renderToday()"><span class="navicon">📤</span>Saídas hoje</button>
+  <button class="navbtn" onclick="nav('stockAlerts')"><span class="navicon">⚠️</span>Alerta de Estoque</button>
   <button class="navbtn" onclick="nav('history')"><span class="navicon">🕘</span>Histórico</button>
 </section>
 <section class="section-card">
@@ -1065,6 +1065,25 @@ async function loadInventoryHistory(q){clearTimeout(inventoryHistoryTimer);inven
 function renderStock(){$('content').innerHTML=`<section class="stock-page"><div class="stock-head"><div><h2>🔎 Materiais em estoque</h2><span id="stockCount">Pesquise por material, código, marca ou fabricante.</span></div></div><section class="panel stock-search-panel"><div class="searchbox"><input id="stockSearch" class="input stock-search" placeholder="🔎 Procurar material, código, marca ou fabricante..." oninput="searchStock(this.value)"><div id="stockSug" class="suggestions" style="display:none"></div></div></section><section id="stockList" class="stock-table-wrap"><div class="stock-empty">🔎 Digite pelo menos 2 caracteres para consultar o estoque.</div></section></section>`}
 let stockTimer;let stockRequestId=0;
 async function searchStock(q){clearTimeout(stockTimer);const list=$('stockList'),count=$('stockCount'),term=q.trim();if(!term){stockRequestId++;list.innerHTML='<div class="stock-empty">🔎 Digite pelo menos 2 caracteres para consultar o estoque.</div>';count.textContent='Pesquise por material, código, marca ou fabricante.';return}if(term.length<2){count.textContent='Digite mais um caractere para pesquisar.';return}const requestId=++stockRequestId;stockTimer=setTimeout(async()=>{try{const r=await jsonp({action:'products',q:term});if(requestId!==stockRequestId)return;if(!r.ok)throw new Error(r.error);const products=Array.isArray(r.products)?r.products:[];count.textContent=`${products.length} material(is) encontrado(s)`;list.innerHTML=products.length?`<div class="stock-table"><div class="stock-row stock-header"><div>Código</div><div>Material</div><div>Marca</div><div>Estoque</div></div>${products.map(p=>{const n=Number(p.stock)||0;const status=n<=0?'sem':(n<=3?'baixo':'ok');const statusText=status==='sem'?'SEM ESTOQUE':status==='baixo'?'ESTOQUE BAIXO':'DISPONÍVEL';const icon=status==='ok'?'🟢':status==='baixo'?'🟠':'🔴';return `<div class="stock-row"><div class="stock-code">${esc(p.code)}</div><div class="stock-material"><b>${esc(p.description)}</b><small>${p.brand?`Fab.: ${esc(p.brand)}`:''}</small></div><div class="stock-brand">${esc(p.brand||'—')}</div><div class="stock-balance"><strong>${esc(p.stock)}</strong><small>${esc(p.unit||'UN')}</small><span class="stock-status ${status}">${icon} ${statusText}</span></div></div>`}).join('')}</div>`:'<div class="stock-empty">❌ Nenhum material encontrado.</div>'}catch(e){if(requestId!==stockRequestId)return;toast(e.message)}},250)}
+async function renderStockAlerts(){
+  state.page='stockAlerts';$('backBtn').hidden=false;
+  $('content').innerHTML=`<div class="calendar-head"><div><h2 class="page-title">⚠️ Alerta de Estoque</h2><p>Materiais com saldo abaixo do estoque mínimo cadastrado.</p></div><button class="secondary" onclick="renderStockAlerts()">⟳ Atualizar</button></div><section class="section-card"><div id="stockAlertSummary" class="empty">Consultando os níveis de estoque...</div><div id="stockAlertList" class="activity-list"></div></section>`;
+  try{
+    const r=await jsonp({action:'stockalerts'});
+    if(!r||!r.ok)throw new Error(r?.error||'Não foi possível consultar os alertas.');
+    const summary=$('stockAlertSummary'),list=$('stockAlertList');
+    if(!r.configured){
+      summary.innerHTML=`<div class="status err">${esc(r.message||'A coluna de estoque mínimo não foi encontrada na aba ESTOQUE.')}</div><p>Para ativar os alertas, a aba ESTOQUE precisa ter uma coluna com o cabeçalho <b>ESTOQUE MÍNIMO</b> e os limites de cada material preenchidos.</p>`;
+      list.innerHTML='';return;
+    }
+    const items=Array.isArray(r.items)?r.items:[];
+    const zero=items.filter(x=>Number(x.stock)<=0).length;
+    summary.innerHTML=`<div class="dashboard" style="margin:0 0 14px"><div class="metric"><span class="label">⚠️ Abaixo do mínimo</span><div class="value">${items.length}</div><div class="hint">Materiais que precisam de reposição</div></div><div class="metric"><span class="label">🚫 Estoque zerado</span><div class="value">${zero}</div><div class="hint">Sem saldo disponível</div></div></div><p>${items.length?`Última consulta: ${esc(r.checkedAt||'agora')}`:'Todos os materiais estão no nível mínimo ou acima.'}</p>`;
+    if(!items.length){list.innerHTML='<div class="empty">✅ Nenhum material abaixo do estoque mínimo.</div>';return;}
+    list.innerHTML=items.map(p=>{const isZero=Number(p.stock)<=0;return `<article class="calendar-movement"><div class="calendar-movement-top"><span class="act-icon">${isZero?'🚫':'⚠️'}</span><div class="calendar-movement-main"><b>${esc(p.description||p.code)}</b><small>${esc(p.code)}${p.brand?' • '+esc(p.brand):''}<br>Estoque atual: <b>${esc(p.stock)} ${esc(p.unit||'UN')}</b> • Mínimo: <b>${esc(p.minimum)} ${esc(p.unit||'UN')}</b></small></div><span class="pill ${isZero?'status-cancelada':'entrada'}">${isZero?'ZERADO':'ABAIXO'}</span></div></article>`}).join('');
+  }catch(e){const box=$('stockAlertSummary');if(box)box.innerHTML=`<div class="status err">${esc(e.message)}</div>`}
+}
+
 async function renderToday(){
   state.page='today';
   const today=new Date().toLocaleDateString('pt-BR');
@@ -1180,7 +1199,7 @@ function renderHome(){
     <button class="navbtn" onclick="nav('stock')"><span class="navicon">🔎</span>Consultar estoque</button>
     <button class="navbtn" onclick="nav('inventory')"><span class="navicon">📋</span>Inventário</button>
     <button class="navbtn" onclick="nav('entry')"><span class="navicon">📥</span>Entrada produtos</button>
-    <button class="navbtn" onclick="renderToday()"><span class="navicon">📤</span>Saídas hoje</button>
+    <button class="navbtn" onclick="nav('stockAlerts')"><span class="navicon">⚠️</span>Alerta de Estoque</button>
     <button class="navbtn" onclick="nav('history')"><span class="navicon">🕘</span>Histórico</button>
   </section>
   <section class="section-card">

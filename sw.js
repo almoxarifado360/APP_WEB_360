@@ -1,4 +1,4 @@
-const CACHE_NAME = 'estoque-360-calendar-v27';
+const CACHE_NAME = 'estoque-360-calendar-v28';
 const CORE = [
   './',
   './index.html',
