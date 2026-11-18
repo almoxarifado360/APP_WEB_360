@@ -615,21 +615,22 @@ const DESTINOS_SAIDA={
   uso_interno:{label:'Uso interno',short:'Uso interno',refLabel:'',placeholder:''},
   outro:{label:'Outro',short:'Outro',refLabel:'Referência',placeholder:'Informe a referência da saída'}
 };
-const state={page:'home',items:[],entryItems:[],order:null,returnItems:[],destination:'os',activities:[],inventoryItems:[]};
+const _todayCalendar=new Date();
+const state={page:'home',items:[],entryItems:[],order:null,returnItems:[],destination:'os',activities:[],inventoryItems:[],calendarYear:_todayCalendar.getFullYear(),calendarMonth:_todayCalendar.getMonth()+1,calendarSelectedDay:_todayCalendar.getDate(),calendarMovements:[],calendarFilter:'todos'};
 const $=id=>document.getElementById(id);
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function toast(msg){$('toast').textContent=msg;$('toast').style.display='block';clearTimeout(window._toast);window._toast=setTimeout(()=>$('toast').style.display='none',3200)}
 function apiReady(){if(API_URL.startsWith('COLE_')){toast('Configure a URL da API no index.html.');return false}return true}
 function jsonp(params){return new Promise((resolve,reject)=>{if(!apiReady())return reject(new Error('API não configurada.'));const cb='cb_'+Date.now()+'_'+Math.random().toString(36).slice(2);const script=document.createElement('script');const qs=new URLSearchParams({...params,callback:cb});const timer=setTimeout(()=>{cleanup();reject(new Error('Tempo esgotado ao consultar a planilha.'))},30000);function cleanup(){clearTimeout(timer);delete window[cb];script.remove()}window[cb]=data=>{cleanup();resolve(data)};script.onerror=()=>{cleanup();reject(new Error('Não foi possível conectar à API.'))};script.src=API_URL+'?'+qs.toString();document.body.appendChild(script)})}
 function post(payload){return new Promise((resolve,reject)=>{if(!apiReady())return reject(new Error('API não configurada.'));const form=document.createElement('form');form.method='POST';form.action=API_URL;form.target='postFrame';form.style.display='none';const input=document.createElement('input');input.type='hidden';input.name='payload';input.value=JSON.stringify(payload);form.appendChild(input);document.body.appendChild(form);form.submit();form.remove();const started=Date.now();const poll=async()=>{try{const r=await jsonp({action:'status',tx:payload.tx});if(r.ok&&(r.status==='CONCLUIDO'||r.status==='ERRO'))return r.status==='CONCLUIDO'?resolve(r.result||r):reject(new Error(r.message||'Falha na operação.'))}catch(e){}if(Date.now()-started>25000)return reject(new Error('A planilha não confirmou a operação no tempo esperado.'));setTimeout(poll,1000)};setTimeout(poll,900)})}
-function nav(page){state.page=page;closeModal();if(page==='home')renderHome();if(page==='new')renderNovaSaida();if(page==='return')renderReturn();if(page==='stock')renderStock();if(page==='inventory')renderInventario();if(page==='entry')renderEntrada();if(page==='history')renderHistory();if(page==='today')renderToday();$('backBtn').hidden=page==='home'}
+function nav(page){state.page=page;closeModal();if(page==='home')renderHome();if(page==='new')renderNovaSaida();if(page==='return')renderReturn();if(page==='returnLookup')renderReturnLookup();if(page==='stock')renderStock();if(page==='inventory')renderInventario();if(page==='entry')renderEntrada();if(page==='history')renderHistory();if(page==='today')renderToday();$('backBtn').hidden=page==='home'}
 $('backBtn').onclick=()=>nav('home');$('homeBtn').onclick=()=>nav('home');
-function renderNav(){return `<nav class="navbar"><button class="navbtn ${state.page==='home'?'active':''}" onclick="nav('home')"><span class="navicon">⌂</span>Início</button><button class="navbtn ${state.page==='new'?'active':''}" onclick="nav('new')"><span class="navicon">📦</span>Nova saída</button><button class="navbtn ${state.page==='return'?'active':''}" onclick="nav('return')"><span class="navicon">↩</span>Devolução</button><button class="navbtn ${state.page==='history'?'active':''}" onclick="nav('history')"><span class="navicon">◷</span>Histórico</button></nav>`}
+function renderNav(){return `<nav class="navbar"><button class="navbtn ${state.page==='home'?'active':''}" onclick="nav('home')"><span class="navicon">⌂</span>Início</button><button class="navbtn ${state.page==='new'?'active':''}" onclick="nav('new')"><span class="navicon">📦</span>Nova saída</button><button class="navbtn ${state.page==='return'?'active':''}" onclick="nav('return')"><span class="navicon">↩</span>Movimentações</button><button class="navbtn ${state.page==='history'?'active':''}" onclick="nav('history')"><span class="navicon">◷</span>Histórico</button></nav>`}
 function renderHome(){state.page='home';$('content').innerHTML=`
 <section class="home-grid">
   <button class="navbtn active" onclick="nav('home')"><span class="navicon">🏠</span>Início</button>
   <button class="navbtn" onclick="nav('new')"><span class="navicon">📦</span>Nova saída</button>
-  <button class="navbtn" onclick="nav('return')"><span class="navicon">↩️</span>Devolução</button>
+  <button class="navbtn" onclick="nav('return')"><span class="navicon">🗓️</span>Movimentações</button>
   <button class="navbtn" onclick="nav('stock')"><span class="navicon">🔎</span>Consultar estoque</button>
   <button class="navbtn" onclick="nav('inventory')"><span class="navicon">📋</span>Inventário</button>
   <button class="navbtn" onclick="nav('entry')"><span class="navicon">📥</span>Entrada produtos</button>
@@ -927,7 +928,50 @@ async function carregarHistoricoEntradas(q){
   }catch(e){list.innerHTML=`<div class="status err">${esc(e.message)}</div>`}
 }
 
-function renderReturn(){$('content').innerHTML=`<h2 class="page-title">Devolução</h2><section class="panel"><div class="field"><label>Tipo</label><select id="returnType" class="select"><option value="os">OS</option><option value="tarefa">Tarefa</option></select></div><div class="field"><label>Referência da OS ou Tarefa</label><input id="returnNumber" class="input" type="text" maxlength="80" placeholder="Ex.: 4505 ou MANUTENÇÃO BOMBA 01"></div><button class="primary orangebtn" onclick="findOrder()">🔎 LOCALIZAR MATERIAIS</button></section><section id="returnResult"></section>`}
+function renderReturn(){
+  state.page='return';$('backBtn').hidden=false;
+  const monthName=new Date(state.calendarYear,state.calendarMonth-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  $('content').innerHTML=`<div class="calendar-head"><div><h2 class="page-title">Movimentações</h2><p>Escolha um dia para consultar saídas, devoluções e entradas.</p></div><button class="secondary calendar-search-btn" onclick="renderReturnLookup()">🔎 Buscar OS/Tarefa</button></div>
+  <section class="panel calendar-panel"><div class="calendar-toolbar"><button class="calendar-arrow" onclick="changeCalendarMonth(-1)" aria-label="Mês anterior">‹</button><strong id="calendarMonthLabel">${esc(monthName)}</strong><button class="calendar-arrow" onclick="changeCalendarMonth(1)" aria-label="Próximo mês">›</button></div>
+  <div class="calendar-weekdays">${['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(d=>`<span>${d}</span>`).join('')}</div><div id="calendarGrid" class="calendar-grid"><div class="empty">Carregando calendário...</div></div>
+  <div class="calendar-legend"><span><i class="dot saida-dot"></i> Saídas</span><span><i class="dot dev-dot"></i> Devoluções</span><span><i class="dot entrada-dot"></i> Entradas</span></div></section>
+  <section class="section-card calendar-day-card"><div class="section-head"><div><h3 id="calendarDayTitle">Movimentações do dia</h3><p id="calendarDaySubtitle">Selecione uma data no calendário.</p></div><select class="select calendar-filter" id="calendarFilter" onchange="state.calendarFilter=this.value;renderCalendarDay()"><option value="todos">Todas</option><option value="saida">Saídas</option><option value="devolucao">Devoluções</option><option value="entrada">Entradas</option></select></div><div id="calendarDayMovements" class="activity-list"><div class="empty">Carregando...</div></div></section>`;
+  loadCalendarMonth();
+}
+function renderReturnLookup(prefill){
+  state.page='returnLookup';$('backBtn').hidden=false;
+  const type=prefill&&prefill.type?prefill.type:'os',number=prefill&&prefill.number?prefill.number:'';
+  $('content').innerHTML=`<div class="editbar"><button onclick="nav('return')">← Voltar ao calendário</button><h2 class="page-title" style="margin:0">Devolução por referência</h2></div><section class="panel"><div class="field"><label>Tipo</label><select id="returnType" class="select"><option value="os" ${type==='os'?'selected':''}>OS</option><option value="tarefa" ${type==='tarefa'?'selected':''}>Tarefa</option></select></div><div class="field"><label>Referência da OS ou Tarefa</label><input id="returnNumber" class="input" type="text" maxlength="80" value="${esc(number)}" placeholder="Ex.: 4505 ou MANUTENÇÃO BOMBA 01"></div><button class="primary orangebtn" onclick="findOrder()">🔎 LOCALIZAR MATERIAIS</button></section><section id="returnResult"></section>`;
+  if(prefill&&number)findOrder();
+}
+function changeCalendarMonth(delta){state.calendarMonth+=delta;if(state.calendarMonth<1){state.calendarMonth=12;state.calendarYear--}if(state.calendarMonth>12){state.calendarMonth=1;state.calendarYear++}state.calendarSelectedDay=1;loadCalendarMonth()}
+async function loadCalendarMonth(){
+  const grid=$('calendarGrid');if(!grid)return;grid.innerHTML='<div class="empty">Consultando movimentações...</div>';
+  try{const r=await jsonp({action:'calendarmonth',year:state.calendarYear,month:state.calendarMonth});if(!r.ok)throw new Error(r.error||'Não foi possível carregar o calendário.');state.calendarMovements=r.movements||[];renderCalendarGrid();renderCalendarDay()}
+  catch(e){grid.innerHTML=`<div class="status err">${esc(e.message)}</div>`;const list=$('calendarDayMovements');if(list)list.innerHTML=`<div class="status err">${esc(e.message)}</div>`}
+}
+function renderCalendarGrid(){
+  const grid=$('calendarGrid');if(!grid)return;
+  const first=new Date(state.calendarYear,state.calendarMonth-1,1),offset=first.getDay(),days=new Date(state.calendarYear,state.calendarMonth,0).getDate();
+  const counts={};state.calendarMovements.forEach(m=>{const k=m.dateKey;if(!counts[k])counts[k]={saida:0,devolucao:0,entrada:0};counts[k][m.kind]=(counts[k][m.kind]||0)+1});
+  const cells=[];for(let i=0;i<offset;i++)cells.push('<div class="calendar-empty"></div>');
+  for(let d=1;d<=days;d++){const key=`${state.calendarYear}-${String(state.calendarMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`,c=counts[key]||{},total=(c.saida||0)+(c.devolucao||0)+(c.entrada||0),selected=d===state.calendarSelectedDay;cells.push(`<button class="calendar-day ${selected?'selected':''} ${total?'has-movement':''}" onclick="selectCalendarDay(${d})"><span>${d}</span>${total?`<small>${total}</small><i class="day-dots"><b class="${c.saida?'saida-dot':''}"></b><b class="${c.devolucao?'dev-dot':''}"></b><b class="${c.entrada?'entrada-dot':''}"></b></i>`:'<i class="day-dots empty-dots"></i>'}</button>`)}
+  grid.innerHTML=cells.join('');const label=$('calendarMonthLabel');if(label)label.textContent=first.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+}
+function selectCalendarDay(day){state.calendarSelectedDay=day;renderCalendarGrid();renderCalendarDay()}
+function renderCalendarDay(){
+  const title=$('calendarDayTitle'),sub=$('calendarDaySubtitle'),list=$('calendarDayMovements');if(!list)return;
+  const key=`${state.calendarYear}-${String(state.calendarMonth).padStart(2,'0')}-${String(state.calendarSelectedDay).padStart(2,'0')}`;
+  const date=new Date(state.calendarYear,state.calendarMonth-1,state.calendarSelectedDay);
+  if(title)title.textContent=date.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  let items=state.calendarMovements.filter(m=>m.dateKey===key);if(state.calendarFilter!=='todos')items=items.filter(m=>m.kind===state.calendarFilter);
+  if(sub)sub.textContent=`${items.length} movimentação(ões)${state.calendarFilter==='todos'?' no dia':` • filtro: ${state.calendarFilter}`}`;
+  if(!items.length){list.innerHTML='<div class="empty">Nenhuma movimentação encontrada nesta data.</div>';return}
+  list.innerHTML=items.map(m=>{const dev=m.kind==='devolucao',ent=m.kind==='entrada',cls=dev?'devolucao':ent?'entrada':'saida',icon=dev?'↩️':ent?'📥':'📤',status=String(m.status||'ATIVA').toUpperCase(),n=(m.items||[]).length,canReturn=m.kind==='saida'&&(m.type==='os'||m.type==='tarefa');return `<article class="calendar-movement"><div class="calendar-movement-top"><span class="act-icon">${icon}</span><div class="calendar-movement-main"><b>${esc(m.title||'Movimentação')}</b><small>${esc(m.detail||'')} • ${n} material(is)<br>${esc(formatServerDate(m.when))}</small></div><span class="pill ${cls}">${dev?'Devolução':ent?'Entrada':'Saída'}</span></div><div class="calendar-movement-bottom"><span class="movement-status">${esc(status)}</span><div class="calendar-card-actions"><button class="secondary" onclick="openMovement('${esc(m.tx)}')">Consultar</button>${m.editable?`<button class="secondary" onclick="startEditMovement('${esc(m.tx)}')">Editar</button>`:''}${canReturn&&m.status==='ATIVA'?`<button class="primary greenbtn" onclick="returnFromMovement('${esc(m.tx)}')">Devolver</button>`:''}</div></div></article>`}).join('');
+}
+async function returnFromMovement(tx){try{const m=await jsonp({action:'movement',tx});if(!m.ok)throw new Error(m.error||'Movimentação não encontrada.');if(m.kind!=='saida'||!['os','tarefa'].includes(m.type))throw new Error('A devolução direta está disponível para saídas de OS e Tarefas.');renderReturnLookup({type:m.type,number:m.number})}catch(e){openModal(`<h3>Não foi possível abrir a devolução</h3><div class="status err">${esc(e.message)}</div><button class="secondary" onclick="closeModal()">FECHAR</button>`)}
+}
+
 async function findOrder(){const type=$('returnType').value,number=$('returnNumber').value.trim();if(!number)return toast('Informe a referência.');$('returnResult').innerHTML='<section class="panel">Localizando materiais...</section>';try{const r=await jsonp({action:'order',type,number});if(!r.ok)throw new Error(r.error);state.order=r;state.returnItems=r.items.map(x=>({...x,qty:0}));renderReturnResult()}catch(e){$('returnResult').innerHTML=`<section class="panel"><div class="status err">${esc(e.message)}</div></section>`}}
 function renderReturnResult(){const r=state.order;$('returnResult').innerHTML=`<section class="panel"><div class="order-found">✓ ${esc(r.label)} encontrada<br><small>Recebedor: ${esc(r.receiver||'Não informado')}</small></div><div class="items">${r.items.map((p,i)=>`<div class="order-item"><div class="row"><div><b>${esc(p.description)}</b><br><small>${esc(p.code)} • Retirado: ${p.withdrawn} • Já devolvido: ${p.returned} • Disponível: ${p.available}</small></div><input class="returnqty" type="number" min="0" max="${p.available}" step="any" value="0" onchange="state.returnItems[${i}].qty=Number(this.value)"></div></div>`).join('')}</div><button class="primary greenbtn" style="margin-top:12px" onclick="confirmReturn()">✓ CONFIRMAR DEVOLUÇÃO</button></section>`}
 function confirmReturn(){const items=state.returnItems.filter(x=>Number(x.qty)>0).map(x=>({code:x.code,qty:Number(x.qty)}));if(!items.length)return toast('Informe pelo menos uma quantidade para devolver.');if(state.returnItems.some(x=>Number(x.qty)>Number(x.available)))return toast('A quantidade devolvida não pode ser maior que o disponível.');openModal(`<h3>Confirmar devolução</h3><div class="summary">${items.length} material(is) voltarão ao estoque.</div><div class="modalactions"><button class="primary greenbtn" onclick="doReturn()">CONFIRMAR DEVOLUÇÃO</button><button class="secondary" onclick="closeModal()">CANCELAR</button></div>`)}
@@ -1132,7 +1176,7 @@ function renderHome(){
   <section class="home-grid">
     <button class="navbtn active" onclick="nav('home')"><span class="navicon">🏠</span>Início</button>
     <button class="navbtn" onclick="nav('new')"><span class="navicon">📦</span>Nova saída</button>
-    <button class="navbtn" onclick="nav('return')"><span class="navicon">↩️</span>Devolução</button>
+    <button class="navbtn" onclick="nav('return')"><span class="navicon">🗓️</span>Movimentações</button>
     <button class="navbtn" onclick="nav('stock')"><span class="navicon">🔎</span>Consultar estoque</button>
     <button class="navbtn" onclick="nav('inventory')"><span class="navicon">📋</span>Inventário</button>
     <button class="navbtn" onclick="nav('entry')"><span class="navicon">📥</span>Entrada produtos</button>
@@ -1172,6 +1216,7 @@ function showMovementModal(m){
     ${canEdit?`<div class="movement-actions">
       <button class="primary" onclick="startEditMovement('${esc(m.tx)}')">✏️ EDITAR</button>
       <button class="secondary" onclick="confirmCancelMovement('${esc(m.tx)}')">↩️ DESFAZER</button>
+      ${m.kind==='saida'&&['os','tarefa'].includes(m.type)?`<button class="primary greenbtn" style="grid-column:1/-1" onclick="closeModal();returnFromMovement('${esc(m.tx)}')">↩️ DEVOLVER MATERIAIS</button>`:''}
       <button class="secondary" style="grid-column:1/-1" onclick="confirmCancelMovement('${esc(m.tx)}',true)">🗑️ EXCLUIR MOVIMENTAÇÃO</button>
     </div>`:`<div class="status">Esta movimentação já está ${esc(status.toLowerCase())}.</div>`}
     <button class="secondary" style="margin-top:10px;width:100%" onclick="closeModal()">FECHAR</button>`);
@@ -1297,6 +1342,15 @@ function renderToday(){
 function renderActivitiesFrom(items){return items.map(a=>{const cls=a.status==='CANCELADA'?'status-cancelada':a.status==='EDITADA'?'status-editada':'';return `<div class="activity clickable ${cls}" role="button" tabindex="0" onclick="openMovement('${esc(a.tx)}')" onkeydown="if(event.key==='Enter'||event.key===' ')openMovement('${esc(a.tx)}')"><div class="act-icon">📤</div><div class="act-main"><b>${esc(a.title)}</b><small>${esc(a.detail)}<br>${esc(a.when)}</small><small style="color:#1c70dc;font-weight:800">Toque para abrir • editar • desfazer</small></div><span class="pill saida">↑ Saída</span><span class="chev">›</span></div>`}).join('')}
 </script>
 <script>
+
+const calendar360Style=document.createElement('style');
+calendar360Style.textContent=`
+.calendar-head{display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap;margin-bottom:14px}.calendar-head .page-title{margin-bottom:4px}.calendar-head p{margin:0;color:var(--muted);font-size:13px}.calendar-search-btn{white-space:nowrap;min-height:42px}
+.calendar-panel{padding:16px}.calendar-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;text-transform:capitalize;font-size:18px;color:var(--blue)}.calendar-arrow{width:42px;height:42px;border:1px solid var(--line);border-radius:12px;background:#f6f9fc;color:var(--blue);font-size:30px;line-height:1;cursor:pointer}.calendar-weekdays,.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}.calendar-weekdays{margin-bottom:8px}.calendar-weekdays span{text-align:center;font-size:12px;font-weight:800;color:var(--muted);padding:5px 0}.calendar-day{min-width:0;min-height:62px;border:1px solid transparent;border-radius:12px;background:#f5f8fc;color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;padding:5px 2px}.calendar-day.selected{border-color:var(--brand);background:#e6f2ff;box-shadow:inset 0 0 0 1px var(--brand);color:var(--blue);font-weight:900}.calendar-day.has-movement{background:#edf5ff}.calendar-day small{font-size:10px;font-weight:800;color:var(--blue)}.day-dots{height:6px;display:flex;gap:3px;align-items:center}.day-dots b,.calendar-legend .dot{width:6px;height:6px;border-radius:50%;display:inline-block}.day-dots b:empty{display:none}.saida-dot{background:#2474d2}.dev-dot{background:#16a36a}.entrada-dot{background:#f28a08}.empty-dots{visibility:hidden}.calendar-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;color:var(--muted);font-size:12px}.calendar-legend span{display:flex;align-items:center;gap:6px}.calendar-day-card{margin-top:16px}.calendar-filter{max-width:145px;min-height:40px;padding:7px 28px 7px 10px}.calendar-movement{border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px;background:#fff}.calendar-movement-top{display:flex;align-items:flex-start;gap:10px}.calendar-movement-main{min-width:0;flex:1}.calendar-movement-main b{display:block;font-size:14px}.calendar-movement-main small{display:block;color:var(--muted);font-size:12px;line-height:1.5;margin-top:4px}.calendar-movement-bottom{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;padding-top:9px;border-top:1px solid #edf1f5}.movement-status{font-size:11px;color:var(--muted);font-weight:700}.calendar-card-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.calendar-card-actions button{min-height:34px;padding:6px 10px;font-size:12px}.calendar-card-actions .greenbtn{background:#159768}.calendar-movement .pill{white-space:nowrap}
+@media(max-width:560px){.calendar-day{min-height:52px;border-radius:9px}.calendar-weekdays,.calendar-grid{gap:4px}.calendar-panel{padding:12px}.calendar-head{align-items:stretch}.calendar-search-btn{width:100%}.calendar-movement-bottom{align-items:flex-start;flex-direction:column}.calendar-card-actions{width:100%;justify-content:flex-start}.calendar-filter{max-width:125px}}
+`;
+document.head.appendChild(calendar360Style);
+
 renderHome();
 </script>
 <script>
